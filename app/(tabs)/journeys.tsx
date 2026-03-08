@@ -1,12 +1,12 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-export default function JourneysPlaceholderScreen() {
+export default function ActivityPlaceholderScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Text style={styles.title}>Journeys</Text>
-        <Text style={styles.copy}>This tab can hold your route history, saved paths, and future runs.</Text>
+        <Text style={styles.title}>Activity</Text>
+        <Text style={styles.copy}>This tab is ready for movement summaries, coaching prompts, or live activity tools.</Text>
       </View>
     </SafeAreaView>
   );

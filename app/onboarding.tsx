@@ -9,56 +9,92 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type QuestionPage = {
-  id: string;
-  title: string;
-  options: string[];
+type ProfileState = {
+  age: string;
+  gender: string;
+  name: string;
+  weight: string;
 };
 
-const QUESTION_PAGES: QuestionPage[] = [
+type IntroPage = {
+  id: string;
+  kind: 'profile';
+  title: string;
+};
+
+type QuestionPage = {
+  id: string;
+  kind: 'options';
+  options: string[];
+  title: string;
+};
+
+type OnboardingPage = IntroPage | QuestionPage;
+
+const ONBOARDING_PAGES: OnboardingPage[] = [
+  {
+    id: 'profile',
+    kind: 'profile',
+    title: 'Tell us about\nyourself',
+  },
   {
     id: 'movement',
+    kind: 'options',
     title: 'How do you prefer\nto move?',
     options: ['High-Intensity Bursts', 'Steady Endurance', 'Mindful Recovery'],
   },
   {
     id: 'terrain',
-    title: 'What’s your\nprimary terrain?',
+    kind: 'options',
+    title: "What's your\nprimary terrain?",
     options: ['Urban Streets', 'Nature Trails', 'Gym or Studio', 'Home'],
   },
   {
     id: 'elements',
+    kind: 'options',
     title: 'How do you handle\nthe elements?',
-    options: ['I love the heat', 'I prefer the shade', 'I’m an indoor explorer'],
+    options: ['I love the heat', 'I prefer the shade', "I'm an indoor explorer"],
   },
   {
     id: 'goal',
+    kind: 'options',
     title: 'What is your\n"North Star"\nfor this journey?',
     options: ['Building Strength', 'Increasing Stamina', 'Better Sleep', 'Daily Consistency'],
   },
   {
     id: 'frequency',
+    kind: 'options',
     title: 'How many days a\nweek are you\nhitting the trail?',
     options: ['1-2 (Exploring)', '3-4 (Active)', '5+ (Trailblazer)'],
   },
   {
     id: 'level',
-    title: 'What’s your current\n"Basics" level?',
+    kind: 'options',
+    title: `What's your current\n"Basics" level?`,
     options: ['Just starting out', 'Consistent mover', 'Seasoned active'],
   },
 ];
 
+const GENDER_OPTIONS = ['Male', 'Female', 'Prefer not to say'];
+
 export default function OnboardingScreen() {
   const { width } = useWindowDimensions();
   const cardWidth = Math.max(width - 56, 280);
-  const listRef = useRef<FlatList<QuestionPage>>(null);
+  const listRef = useRef<FlatList<OnboardingPage>>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [profile, setProfile] = useState<ProfileState>({
+    age: '',
+    gender: '',
+    name: '',
+    weight: '',
+  });
 
   const vibrateSelection = async () => {
     await Haptics.selectionAsync();
@@ -70,7 +106,7 @@ export default function OnboardingScreen() {
   };
 
   const goToPage = async (page: number) => {
-    if (page < 0 || page >= QUESTION_PAGES.length) {
+    if (page < 0 || page >= ONBOARDING_PAGES.length) {
       return;
     }
 
@@ -81,14 +117,19 @@ export default function OnboardingScreen() {
 
   const finishOnboarding = async () => {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.replace('/(tabs)');
+    router.replace({
+      pathname: '/(tabs)',
+      params: {
+        name: profile.name || 'Janna',
+      },
+    });
   };
 
   const handleSelect = async (pageId: string, option: string) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setAnswers((current) => ({ ...current, [pageId]: option }));
 
-    if (currentPage < QUESTION_PAGES.length - 1) {
+    if (currentPage < ONBOARDING_PAGES.length - 1) {
       listRef.current?.scrollToIndex({ index: currentPage + 1, animated: true });
       setCurrentPage(currentPage + 1);
       return;
@@ -97,24 +138,89 @@ export default function OnboardingScreen() {
     await finishOnboarding();
   };
 
+  const updateProfile = (key: keyof ProfileState, value: string) => {
+    setProfile((current) => ({ ...current, [key]: value }));
+  };
+
+  const renderProfilePage = () => (
+    <View style={styles.profileCard}>
+      <View style={styles.fieldGroup}>
+        <Text style={styles.fieldLabel}>What should we call you?</Text>
+        <TextInput
+          onChangeText={(value) => updateProfile('name', value)}
+          placeholder="Enter your name"
+          placeholderTextColor="#C9D1FF"
+          style={styles.input}
+          value={profile.name}
+        />
+      </View>
+
+      <View style={styles.doubleFieldRow}>
+        <View style={styles.halfField}>
+          <Text style={styles.fieldLabel}>Age</Text>
+          <TextInput
+            keyboardType="number-pad"
+            onChangeText={(value) => updateProfile('age', value)}
+            placeholder="Years"
+            placeholderTextColor="#C9D1FF"
+            style={styles.input}
+            value={profile.age}
+          />
+        </View>
+
+        <View style={styles.halfField}>
+          <Text style={styles.fieldLabel}>Weight</Text>
+          <TextInput
+            keyboardType="decimal-pad"
+            onChangeText={(value) => updateProfile('weight', value)}
+            placeholder="kg"
+            placeholderTextColor="#C9D1FF"
+            style={styles.input}
+            value={profile.weight}
+          />
+        </View>
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={styles.fieldLabel}>Gender</Text>
+        <View style={styles.genderList}>
+          {GENDER_OPTIONS.map((option) => {
+            const isSelected = profile.gender === option;
+
+            return (
+              <Pressable
+                key={option}
+                onPress={async () => {
+                  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  updateProfile('gender', option);
+                }}
+                style={[styles.optionButton, isSelected ? styles.optionButtonSelected : undefined]}
+              >
+                <MaterialCommunityIcons color="#FFFFFF" name="star-four-points-circle-outline" size={16} />
+                <Text style={styles.optionText}>{option}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.frame}>
         <View style={styles.topBar}>
           <Text style={styles.progressText}>
-            {currentPage + 1}/{QUESTION_PAGES.length}
+            {currentPage + 1}/{ONBOARDING_PAGES.length}
           </Text>
-          <Pressable
-            onPress={finishOnboarding}
-            style={styles.skipButton}
-          >
+          <Pressable onPress={finishOnboarding} style={styles.skipButton}>
             <Text style={styles.skipText}>Skip</Text>
           </Pressable>
         </View>
 
         <FlatList
           ref={listRef}
-          data={QUESTION_PAGES}
+          data={ONBOARDING_PAGES}
           horizontal
           keyExtractor={(item) => item.id}
           onMomentumScrollEnd={handleScrollEnd}
@@ -123,26 +229,30 @@ export default function OnboardingScreen() {
             <View style={[styles.page, { width: cardWidth }]}>
               <Text style={styles.title}>{item.title}</Text>
 
-              <View style={styles.optionList}>
-                {item.options.map((option) => {
-                  const isSelected = answers[item.id] === option;
+              {item.kind === 'profile' ? (
+                renderProfilePage()
+              ) : (
+                <View style={styles.optionList}>
+                  {item.options.map((option) => {
+                    const isSelected = answers[item.id] === option;
 
-                  return (
-                    <Pressable
-                      key={option}
-                      onPress={() => handleSelect(item.id, option)}
-                      style={[styles.optionButton, isSelected ? styles.optionButtonSelected : undefined]}
-                    >
-                      <MaterialCommunityIcons
-                        color="#FFFFFF"
-                        name="star-four-points-circle-outline"
-                        size={16}
-                      />
-                      <Text style={styles.optionText}>{option}</Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+                    return (
+                      <Pressable
+                        key={option}
+                        onPress={() => handleSelect(item.id, option)}
+                        style={[styles.optionButton, isSelected ? styles.optionButtonSelected : undefined]}
+                      >
+                        <MaterialCommunityIcons
+                          color="#FFFFFF"
+                          name="star-four-points-circle-outline"
+                          size={16}
+                        />
+                        <Text style={styles.optionText}>{option}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
             </View>
           )}
           showsHorizontalScrollIndicator={false}
@@ -150,7 +260,7 @@ export default function OnboardingScreen() {
 
         <View style={styles.footer}>
           <View style={styles.dotRow}>
-            {QUESTION_PAGES.map((page, index) => {
+            {ONBOARDING_PAGES.map((page, index) => {
               const isActive = index === currentPage;
 
               return (
@@ -174,14 +284,14 @@ export default function OnboardingScreen() {
 
             <Pressable
               onPress={() =>
-                currentPage === QUESTION_PAGES.length - 1
+                currentPage === ONBOARDING_PAGES.length - 1
                   ? finishOnboarding()
                   : goToPage(currentPage + 1)
               }
               style={styles.navButton}
             >
               <Text style={styles.navButtonText}>
-                {currentPage === QUESTION_PAGES.length - 1 ? 'Finish' : 'Next'}
+                {currentPage === ONBOARDING_PAGES.length - 1 ? 'Finish' : 'Next'}
               </Text>
             </Pressable>
           </View>
@@ -239,8 +349,47 @@ const styles = StyleSheet.create({
     lineHeight: 37,
     fontWeight: '500',
     textAlign: 'center',
-    marginBottom: 42,
+    marginBottom: 34,
     maxWidth: 260,
+  },
+  profileCard: {
+    width: '100%',
+    gap: 18,
+    minHeight: 340,
+    justifyContent: 'center',
+  },
+  fieldGroup: {
+    gap: 10,
+  },
+  doubleFieldRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  halfField: {
+    flex: 1,
+    gap: 10,
+  },
+  fieldLabel: {
+    color: '#1B140F',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'left',
+  },
+  input: {
+    minHeight: 52,
+    borderRadius: 18,
+    backgroundColor: '#2F42C7',
+    color: '#FFFFFF',
+    paddingHorizontal: 16,
+    fontSize: 14,
+    shadowColor: '#2F42C7',
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  genderList: {
+    gap: 14,
   },
   optionList: {
     width: '100%',
