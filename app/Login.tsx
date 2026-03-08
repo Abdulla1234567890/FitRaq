@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -38,12 +39,11 @@ export default function Login() {
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.screenCard}>
             <View style={styles.illustrationWrap}>
-              <View style={styles.illustrationPanel} />
-              <View style={styles.illustrationAccent} />
-              <View style={styles.illustrationSheet} />
-              <View style={styles.personWrap}>
-                <Text style={styles.personEmoji}>🧍</Text>
-              </View>
+              <Image
+                contentFit="contain"
+                source={require('@/assets/images/FITRAQ2.png')}
+                style={styles.illustrationImage}
+              />
             </View>
 
             <View style={styles.form}>
@@ -132,48 +132,10 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
   },
-  illustrationPanel: {
-    position: 'absolute',
-    width: 190,
-    height: 120,
-    borderRadius: 20,
-    backgroundColor: '#5F4ACF',
-    bottom: 18,
-    left: 52,
-  },
-  illustrationAccent: {
-    position: 'absolute',
-    width: 84,
-    height: 84,
-    borderRadius: 16,
-    backgroundColor: '#B6A7FF',
-    top: 42,
-    left: 42,
-    transform: [{ rotate: '-18deg' }],
-  },
-  illustrationSheet: {
-    position: 'absolute',
-    width: 96,
-    height: 110,
-    borderRadius: 14,
-    backgroundColor: '#D9D2FF',
-    top: 76,
-    left: 76,
-    transform: [{ rotate: '-8deg' }],
-  },
-  personWrap: {
-    position: 'absolute',
-    right: 52,
-    bottom: 18,
-    width: 76,
-    height: 120,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  personEmoji: {
-    fontSize: 64,
+  illustrationImage: {
+    width: 320,
+    height: 220,
   },
   form: {
     gap: 18,

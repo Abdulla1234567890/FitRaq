@@ -38,19 +38,31 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="journeys"
         options={{
           title: 'Journeys',
           tabBarIcon: ({ color }) => <MaterialIcons size={24} name="alt-route" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="journeys"
+        name="journey-details"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="activity"
         options={{
           title: 'Activity',
           tabBarIcon: ({ color }) => (
             <MaterialIcons size={24} name="accessibility-new" color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="explore"
+        options={{
+          href: null,
         }}
       />
       <Tabs.Screen

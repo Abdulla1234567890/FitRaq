@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,17 +12,11 @@ export default function WelcomeScreen() {
 
       <View style={styles.container}>
         <View style={styles.illustrationCard}>
-          <View style={styles.pathLine} />
-          <View style={styles.pathLineSecondary} />
-          <View style={styles.pathNodeTop} />
-          <View style={styles.pathNodeBottom} />
-          <View style={styles.runnerShadow} />
-          <View style={styles.runnerWrap}>
-            <Text style={styles.runnerEmoji}>🏃</Text>
-          </View>
-          <View style={styles.statBadge}>
-            <Text style={styles.statText}>50</Text>
-          </View>
+          <Image
+            contentFit="contain"
+            source={require('@/assets/images/Onbording-page.png')}
+            style={styles.illustrationImage}
+          />
         </View>
 
         <View style={styles.progressTrack}>
@@ -70,87 +65,14 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   illustrationCard: {
-    width: 230,
-    height: 260,
-    borderRadius: 28,
-    backgroundColor: '#F5F1EB',
+    width: 300,
+    height: 290,
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'relative',
   },
-  pathLine: {
-    position: 'absolute',
-    top: 86,
-    left: 28,
-    width: 148,
-    height: 2,
-    backgroundColor: '#BBC3CB',
-    transform: [{ rotate: '-20deg' }],
-  },
-  pathLineSecondary: {
-    position: 'absolute',
-    top: 120,
-    left: 78,
-    width: 102,
-    height: 2,
-    backgroundColor: '#BBC3CB',
-    transform: [{ rotate: '-14deg' }],
-  },
-  pathNodeTop: {
-    position: 'absolute',
-    top: 78,
-    right: 30,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#223047',
-    borderWidth: 3,
-    borderColor: '#E2E6EA',
-  },
-  pathNodeBottom: {
-    position: 'absolute',
-    top: 116,
-    left: 36,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#223047',
-    borderWidth: 3,
-    borderColor: '#E2E6EA',
-  },
-  runnerWrap: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#8A5CF6',
-    transform: [{ rotate: '-6deg' }],
-  },
-  runnerShadow: {
-    position: 'absolute',
-    bottom: 46,
-    width: 92,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: 'rgba(34, 48, 71, 0.08)',
-  },
-  runnerEmoji: {
-    fontSize: 42,
-  },
-  statBadge: {
-    position: 'absolute',
-    right: 18,
-    top: 108,
-    borderRadius: 10,
-    backgroundColor: '#314150',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  statText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
+  illustrationImage: {
+    width: '100%',
+    height: '100%',
   },
   progressTrack: {
     width: 136,
@@ -158,7 +80,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: '#D8D8D8',
     overflow: 'hidden',
-    marginTop: 10,
+    marginTop: 4,
   },
   progressFill: {
     width: '30%',
@@ -175,8 +97,8 @@ const styles = StyleSheet.create({
     maxWidth: 250,
   },
   primaryButton: {
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     width: 68,
     height: 68,
     borderRadius: 34,
