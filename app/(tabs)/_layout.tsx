@@ -55,6 +55,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="start-journey"
+        options={{
+          href: null,
+          tabBarStyle: {
+            display: 'none',
+          },
+        }}
+      />
+      <Tabs.Screen
         name="activity"
         options={{
           title: "Activity",
