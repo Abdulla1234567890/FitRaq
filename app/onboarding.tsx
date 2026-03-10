@@ -18,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 type ProfileState = {
   age: string;
   gender: string;
+  height: string;
   name: string;
   weight: string;
 };
@@ -92,6 +93,7 @@ export default function OnboardingScreen() {
   const [profile, setProfile] = useState<ProfileState>({
     age: '',
     gender: '',
+    height: '',
     name: '',
     weight: '',
   });
@@ -179,6 +181,18 @@ export default function OnboardingScreen() {
             value={profile.weight}
           />
         </View>
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <Text style={styles.fieldLabel}>Height</Text>
+        <TextInput
+          keyboardType="decimal-pad"
+          onChangeText={(value) => updateProfile('height', value)}
+          placeholder="cm"
+          placeholderTextColor="#C9D1FF"
+          style={styles.input}
+          value={profile.height}
+        />
       </View>
 
       <View style={styles.fieldGroup}>
