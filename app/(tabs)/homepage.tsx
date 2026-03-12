@@ -24,7 +24,7 @@ export default function HomePageScreen() {
 
   const handleStartJourney = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push('/(tabs)/start-journey');
+    router.push('/(tabs)/choose-path');
   };
 
   const handleOpenMenu = async () => {

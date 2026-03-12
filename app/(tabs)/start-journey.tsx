@@ -2,7 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
@@ -89,6 +89,26 @@ const ACTIVITY_TYPES: ActivityType[] = [
       { latitude: 25.2021, longitude: 55.272 },
     ],
   },
+  {
+    id: 'hiking',
+    icon: 'hiking',
+    label: 'Hiking',
+    metrics: {
+      avgLabel: 'AVG km/h',
+      avgValue: '4.2',
+      distance: '8.7 km',
+      liveLabel: 'Speed km/h',
+      liveValue: '4.0',
+      time: '01:42:20',
+    },
+    route: [
+      { latitude: 25.1898, longitude: 55.2554 },
+      { latitude: 25.1912, longitude: 55.2588 },
+      { latitude: 25.1941, longitude: 55.2617 },
+      { latitude: 25.1967, longitude: 55.2641 },
+      { latitude: 25.1983, longitude: 55.2682 },
+    ],
+  },
 ];
 
 const DEFAULT_REGION = {
@@ -99,7 +119,9 @@ const DEFAULT_REGION = {
 };
 
 export default function StartJourneyScreen() {
-  const [selectedType, setSelectedType] = useState<ActivityType | null>(null);
+  const params = useLocalSearchParams<{ type?: string }>();
+  const initialType = ACTIVITY_TYPES.find((type) => type.id === params.type) ?? ACTIVITY_TYPES[0];
+  const [selectedType, setSelectedType] = useState<ActivityType | null>(initialType);
   const [paused, setPaused] = useState(false);
   const [permissionState, setPermissionState] = useState<'checking' | 'granted' | 'denied'>('checking');
   const [currentLocation, setCurrentLocation] = useState<Coordinate | null>(null);
@@ -318,7 +340,7 @@ export default function StartJourneyScreen() {
             <Pressable
               onPress={async () => {
                 await Haptics.selectionAsync();
-                router.back();
+                router.replace('/(tabs)/choose-path');
               }}
               style={styles.footerButton}
             >
