@@ -1,6 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
-import { useState } from 'react';
+import { API_BASE_URL } from '@/constants/api';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +17,22 @@ type NutritionDay = {
     lunch: string;
   };
   weekday: string;
+};
+
+type NutritionAnalysis = {
+  daily_total: number;
+  items: {
+    estimated_calories: number;
+    meal: string;
+    name: string;
+  }[];
+  meal_totals: {
+    breakfast: number;
+    dinner: number;
+    extras: number;
+    lunch: number;
+  };
+  notes: string[];
 };
 
 const INITIAL_DAYS: NutritionDay[] = [
@@ -109,8 +126,20 @@ export default function NutritionScreen() {
   const [selectedDayId, setSelectedDayId] = useState('sa-14');
   const [days, setDays] = useState(INITIAL_DAYS);
   const [submitState, setSubmitState] = useState('Meals ready to send to the calorie model.');
+  const [analysis, setAnalysis] = useState<NutritionAnalysis | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const selectedDay = days.find((day) => day.id === selectedDayId) ?? days[0];
+  const hasMealContent = useMemo(
+    () =>
+      Boolean(
+        selectedDay.meals.breakfast.trim() ||
+          selectedDay.meals.lunch.trim() ||
+          selectedDay.meals.dinner.trim() ||
+          selectedDay.extras.some((item) => item.trim())
+      ),
+    [selectedDay]
+  );
 
   const updateMeal = (meal: keyof NutritionDay['meals'], value: string) => {
     setDays((current) =>
@@ -170,8 +199,60 @@ export default function NutritionScreen() {
   };
 
   const submitMeals = async () => {
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setSubmitState('Submitted. Structured meals are ready for calorie analysis.');
+    if (!hasMealContent) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      setSubmitState('Add at least one meal or snack before sending it for analysis.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setSubmitState('Sending meals to the nutrition model...');
+
+      const response = await fetch(`${API_BASE_URL}/analyze-nutrition`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          date: `2026-03-${selectedDay.dateNumber.padStart(2, '0')}`,
+          meals: selectedDay.meals,
+          extras: selectedDay.extras.filter((item) => item.trim()),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok || !data.result) {
+        throw new Error(data.error || 'Nutrition analysis failed.');
+      }
+
+      const nextAnalysis = data.result as NutritionAnalysis;
+
+      setAnalysis(nextAnalysis);
+      setDays((current) =>
+        current.map((day) =>
+          day.id === selectedDayId
+            ? {
+                ...day,
+                calories: nextAnalysis.daily_total,
+              }
+            : day
+        )
+      );
+      setSubmitState(`Analysis complete. Estimated ${nextAnalysis.daily_total} calories for this day.`);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Could not reach the backend. If you are testing on a phone, swap the API URL to your Mac local IP.';
+      setSubmitState(message);
+      setAnalysis(null);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -291,10 +372,37 @@ export default function NutritionScreen() {
 
         <View style={styles.submitCard}>
           <Text style={styles.submitStatus}>{submitState}</Text>
-          <Pressable onPress={submitMeals} style={styles.submitButton}>
-            <Text style={styles.submitButtonText}>Submit for analysis</Text>
+          <Pressable disabled={isSubmitting} onPress={submitMeals} style={[styles.submitButton, isSubmitting ? styles.submitButtonDisabled : undefined]}>
+            <Text style={styles.submitButtonText}>{isSubmitting ? 'Analyzing...' : 'Submit for analysis'}</Text>
           </Pressable>
         </View>
+
+        {analysis ? (
+          <View style={styles.analysisCard}>
+            <Text style={styles.analysisTitle}>Latest calorie breakdown</Text>
+
+            <View style={styles.analysisTotalsRow}>
+              <AnalysisPill label="Breakfast" value={analysis.meal_totals.breakfast} />
+              <AnalysisPill label="Lunch" value={analysis.meal_totals.lunch} />
+              <AnalysisPill label="Dinner" value={analysis.meal_totals.dinner} />
+              <AnalysisPill label="Extras" value={analysis.meal_totals.extras} />
+            </View>
+
+            <View style={styles.analysisList}>
+              {analysis.items.map((item, index) => (
+                <View key={`${item.meal}-${item.name}-${index}`} style={styles.analysisItem}>
+                  <View style={styles.analysisItemText}>
+                    <Text style={styles.analysisItemName}>{item.name}</Text>
+                    <Text style={styles.analysisItemMeal}>{item.meal}</Text>
+                  </View>
+                  <Text style={styles.analysisItemCalories}>{item.estimated_calories} cal</Text>
+                </View>
+              ))}
+            </View>
+
+            {analysis.notes.length > 0 ? <Text style={styles.analysisNote}>{analysis.notes[0]}</Text> : null}
+          </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -321,6 +429,15 @@ function MealField({
         textAlignVertical="top"
         value={value}
       />
+    </View>
+  );
+}
+
+function AnalysisPill({ label, value }: { label: string; value: number }) {
+  return (
+    <View style={styles.analysisPill}>
+      <Text style={styles.analysisPillValue}>{value}</Text>
+      <Text style={styles.analysisPillLabel}>{label}</Text>
     </View>
   );
 }
@@ -557,9 +674,84 @@ const styles = StyleSheet.create({
     backgroundColor: '#2F42C7',
     paddingVertical: 16,
   },
+  submitButtonDisabled: {
+    opacity: 0.7,
+  },
   submitButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '700',
+  },
+  analysisCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 18,
+    gap: 14,
+  },
+  analysisTitle: {
+    color: '#1B140F',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  analysisTotalsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  analysisPill: {
+    borderRadius: 16,
+    backgroundColor: '#F7F4EF',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minWidth: 74,
+    gap: 2,
+  },
+  analysisPillValue: {
+    color: '#1B140F',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  analysisPillLabel: {
+    color: '#7E766F',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  analysisList: {
+    gap: 10,
+  },
+  analysisItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    borderRadius: 18,
+    backgroundColor: '#F9F6F2',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  analysisItemText: {
+    flex: 1,
+    gap: 2,
+  },
+  analysisItemName: {
+    color: '#1B140F',
+    fontSize: 14,
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
+  analysisItemMeal: {
+    color: '#8F867F',
+    fontSize: 12,
+    textTransform: 'capitalize',
+  },
+  analysisItemCalories: {
+    color: '#2F42C7',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  analysisNote: {
+    color: '#6F675F',
+    fontSize: 13,
+    lineHeight: 20,
   },
 });
