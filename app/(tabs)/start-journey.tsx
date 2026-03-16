@@ -1,113 +1,20 @@
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type Coordinate = {
-  latitude: number;
-  longitude: number;
-};
-
-type JourneyTemplate = 'cycling' | 'foot';
-
-type ActivityType = {
-  hero: {
-    label: string;
-  };
-  icon: string;
-  id: string;
-  label: string;
-  primaryLabels: [string, string, string];
-  route: Coordinate[];
-  secondaryLabels: string[];
-  template: JourneyTemplate;
-};
-
-const ACTIVITY_TYPES: ActivityType[] = [
-  {
-    id: 'cycling',
-    icon: 'bike-fast',
-    label: 'Cycling',
-    hero: {
-      label: 'Speed km/h',
-    },
-    template: 'cycling',
-    primaryLabels: ['Distance km', 'Ride time', 'AVG km/h'],
-    secondaryLabels: ['Cadence rpm', 'Climb m'],
-    route: [
-      { latitude: 25.2078, longitude: 55.2711 },
-      { latitude: 25.2112, longitude: 55.2733 },
-      { latitude: 25.2139, longitude: 55.2781 },
-      { latitude: 25.2192, longitude: 55.2814 },
-      { latitude: 25.2231, longitude: 55.2868 },
-    ],
-  },
-  {
-    id: 'running',
-    icon: 'run-fast',
-    label: 'Running',
-    hero: {
-      label: 'Pace /km',
-    },
-    template: 'foot',
-    primaryLabels: ['Distance km', 'Run time', 'AVG pace'],
-    secondaryLabels: ['Steps', 'Calories', 'Elevation m'],
-    route: [
-      { latitude: 25.2018, longitude: 55.2682 },
-      { latitude: 25.2042, longitude: 55.2728 },
-      { latitude: 25.2073, longitude: 55.2754 },
-      { latitude: 25.209, longitude: 55.2798 },
-      { latitude: 25.2114, longitude: 55.2834 },
-    ],
-  },
-  {
-    id: 'walking',
-    icon: 'walk',
-    label: 'Walking',
-    hero: {
-      label: 'Speed km/h',
-    },
-    template: 'foot',
-    primaryLabels: ['Distance km', 'Walk time', 'AVG km/h'],
-    secondaryLabels: ['Steps', 'Calories', 'Elevation m'],
-    route: [
-      { latitude: 25.1976, longitude: 55.2641 },
-      { latitude: 25.1985, longitude: 55.2664 },
-      { latitude: 25.1994, longitude: 55.2689 },
-      { latitude: 25.2008, longitude: 55.2702 },
-      { latitude: 25.2021, longitude: 55.272 },
-    ],
-  },
-  {
-    id: 'hiking',
-    icon: 'hiking',
-    label: 'Hiking',
-    hero: {
-      label: 'Speed km/h',
-    },
-    template: 'foot',
-    primaryLabels: ['Distance km', 'Hike time', 'AVG km/h'],
-    secondaryLabels: ['Steps', 'Calories', 'Elevation m'],
-    route: [
-      { latitude: 25.1898, longitude: 55.2554 },
-      { latitude: 25.1912, longitude: 55.2588 },
-      { latitude: 25.1941, longitude: 55.2617 },
-      { latitude: 25.1967, longitude: 55.2641 },
-      { latitude: 25.1983, longitude: 55.2682 },
-    ],
-  },
-];
+import { ACTIVITY_TYPES, TRAILS, type Coordinate } from './journey-data';
 
 const DEFAULT_REGION = {
   latitude: 25.2048,
   longitude: 55.2708,
-  latitudeDelta: 0.03,
-  longitudeDelta: 0.03,
+  latitudeDelta: 0.05,
+  longitudeDelta: 0.05,
 };
 
 const BASE_SPEEDS: Record<string, number> = {
@@ -118,14 +25,20 @@ const BASE_SPEEDS: Record<string, number> = {
 };
 
 export default function StartJourneyScreen() {
-  const params = useLocalSearchParams<{ type?: string }>();
+  const params = useLocalSearchParams<{ trail?: string; type?: string }>();
   const activeType = ACTIVITY_TYPES.find((type) => type.id === params.type) ?? ACTIVITY_TYPES[0];
+  const availableTrails = TRAILS.filter((trail) => trail.type === activeType.id);
+  const selectedTrail =
+    availableTrails.find((trail) => trail.id === params.trail) ??
+    availableTrails[0] ??
+    TRAILS[0];
+  const initialRegion = useMemo(() => createRegionFromRoute(selectedTrail.route), [selectedTrail.route]);
+
   const [sessionActive, setSessionActive] = useState(false);
   const [paused, setPaused] = useState(false);
   const [permissionState, setPermissionState] = useState<'checking' | 'granted' | 'denied'>('checking');
   const [currentLocation, setCurrentLocation] = useState<Coordinate | null>(null);
-  const [routePoints, setRoutePoints] = useState<Coordinate[]>(activeType.route);
-  const [speedSamples, setSpeedSamples] = useState<number[]>(seedSamples(activeType.id));
+  const [speedSamples, setSpeedSamples] = useState<number[]>(() => seedSamples(activeType.id));
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [distanceKm, setDistanceKm] = useState(0);
   const [stepCount, setStepCount] = useState(0);
@@ -136,14 +49,13 @@ export default function StartJourneyScreen() {
   useEffect(() => {
     setSessionActive(false);
     setPaused(false);
-    setRoutePoints(activeType.route);
     setSpeedSamples(seedSamples(activeType.id));
     setElapsedSeconds(0);
     setDistanceKm(0);
     setStepCount(0);
     setCalories(0);
     setElevationGain(0);
-  }, [activeType.id, activeType.route]);
+  }, [activeType.id, selectedTrail.id]);
 
   useEffect(() => {
     let isMounted = true;
@@ -188,16 +100,16 @@ export default function StartJourneyScreen() {
       return;
     }
 
-    mapRef.current.fitToCoordinates(routePoints, {
+    mapRef.current.fitToCoordinates(selectedTrail.route, {
       animated: true,
       edgePadding: {
         top: 120,
         right: 80,
-        bottom: 120,
+        bottom: 220,
         left: 80,
       },
     });
-  }, [routePoints]);
+  }, [selectedTrail.id, selectedTrail.route]);
 
   useEffect(() => {
     if (!sessionActive || paused) {
@@ -209,9 +121,14 @@ export default function StartJourneyScreen() {
 
       setSpeedSamples((current) => {
         const tick = current.length;
-        const nextValue = computeNextSample(activeType.id, tick, current[current.length - 1] ?? BASE_SPEEDS[activeType.id]);
+        const previousValue = current[current.length - 1] ?? BASE_SPEEDS[activeType.id];
+        const nextValue = computeNextSample(activeType.id, tick, previousValue);
 
-        setDistanceKm((distance) => distance + (nextValue * 3) / 3600);
+        setDistanceKm((distance) => {
+          const seededDistance = selectedTrail.distanceKm * 0.08;
+          const nextDistance = distance + (nextValue * 3) / 3600;
+          return Math.min(selectedTrail.distanceKm, Math.max(nextDistance, seededDistance));
+        });
         setCalories((value) => value + nextValue * (activeType.template === 'cycling' ? 0.42 : 0.78));
         setElevationGain((value) => value + (activeType.id === 'hiking' ? 0.8 : activeType.id === 'running' ? 0.24 : 0.12));
 
@@ -219,14 +136,14 @@ export default function StartJourneyScreen() {
           setStepCount((value) => value + Math.max(4, Math.round(nextValue * 2.4)));
         }
 
-        return [...current.slice(-13), nextValue];
+        return [...current.slice(-15), nextValue];
       });
     }, 3000);
 
     return () => {
       clearInterval(intervalId);
     };
-  }, [activeType.id, activeType.template, paused, sessionActive]);
+  }, [activeType.id, activeType.template, paused, selectedTrail.distanceKm, sessionActive]);
 
   useEffect(() => {
     if (permissionState !== 'granted' || !sessionActive || paused || Platform.OS === 'web') {
@@ -249,15 +166,11 @@ export default function StartJourneyScreen() {
           };
 
           setCurrentLocation(nextPoint);
-          setRoutePoints((current) => [...current.slice(-19), nextPoint]);
 
           if (typeof position.coords.speed === 'number' && position.coords.speed > 0) {
             const speedKmh = position.coords.speed * 3.6;
 
-            setSpeedSamples((current) => {
-              const next = [...current.slice(-13), speedKmh];
-              return next;
-            });
+            setSpeedSamples((current) => [...current.slice(-15), speedKmh]);
           }
         }
       );
@@ -270,49 +183,63 @@ export default function StartJourneyScreen() {
     };
   }, [paused, permissionState, sessionActive]);
 
-  const handleRecenter = async () => {
-    await Haptics.selectionAsync();
-
-    if (!currentLocation || !mapRef.current || Platform.OS === 'web') {
-      return;
-    }
-
-    mapRef.current.animateToRegion(
-      {
-        ...currentLocation,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
-      },
-      400
-    );
-  };
-
   const latestSpeed = speedSamples[speedSamples.length - 1] ?? BASE_SPEEDS[activeType.id];
-  const averageSpeed = speedSamples.reduce((sum, value) => sum + value, 0) / speedSamples.length;
+  const averageSpeed = speedSamples.reduce((sum, value) => sum + value, 0) / Math.max(speedSamples.length, 1);
   const heroValue =
     activeType.id === 'running' ? formatPace(latestSpeed) : latestSpeed.toFixed(activeType.template === 'cycling' ? 0 : 1);
   const thirdPrimaryValue =
     activeType.id === 'running' ? formatPace(averageSpeed) : averageSpeed.toFixed(activeType.template === 'cycling' ? 0 : 1);
 
+  const handleRecenter = async () => {
+    await Haptics.selectionAsync();
+
+    if (!mapRef.current || Platform.OS === 'web') {
+      return;
+    }
+
+    if (currentLocation) {
+      mapRef.current.animateToRegion(
+        {
+          ...currentLocation,
+          latitudeDelta: 0.02,
+          longitudeDelta: 0.02,
+        },
+        400
+      );
+      return;
+    }
+
+    mapRef.current.animateToRegion(initialRegion, 400);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.topBar}>
-          <Text style={styles.gpsText}>
-            GPS ·{' '}
-            {permissionState === 'granted'
-              ? 'Connected'
-              : permissionState === 'denied'
-                ? 'Off'
-                : 'Checking'}
-          </Text>
-          <Text style={styles.headerTitle}>{activeType.label}</Text>
-          <Pressable onPress={() => Haptics.selectionAsync()} style={styles.topIconButton}>
-            <MaterialIcons color="#5C5A73" name="settings" size={24} />
+          <Pressable
+            onPress={async () => {
+              await Haptics.selectionAsync();
+              router.replace({
+                pathname: '/(tabs)/choose-trail',
+                params: { type: activeType.id },
+              });
+            }}
+            style={styles.topCircleButton}
+          >
+            <MaterialIcons color="#1D2474" name="arrow-back-ios-new" size={20} />
+          </Pressable>
+
+          <View style={styles.topTitleWrap}>
+            <Text style={styles.headerEyebrow}>{activeType.label.toUpperCase()}</Text>
+            <Text style={styles.headerTitle}>{selectedTrail.title}</Text>
+          </View>
+
+          <Pressable onPress={() => Haptics.selectionAsync()} style={styles.topCircleButton}>
+            <MaterialIcons color="#1D2474" name="settings" size={22} />
           </Pressable>
         </View>
 
-        <View style={styles.mapArea}>
+        <View style={styles.mapFrame}>
           {Platform.OS === 'web' ? (
             <View style={styles.webFallback}>
               <MaterialIcons color="#5466E8" name="map" size={42} />
@@ -321,17 +248,17 @@ export default function StartJourneyScreen() {
           ) : (
             <MapView
               ref={mapRef}
-              initialRegion={DEFAULT_REGION}
+              initialRegion={initialRegion}
               showsCompass={false}
               showsMyLocationButton={false}
               showsUserLocation={permissionState === 'granted'}
               style={styles.map}
             >
-              <Polyline coordinates={routePoints} strokeColor="#5466E8" strokeWidth={5} />
-              <Marker coordinate={routePoints[0]}>
+              <Polyline coordinates={selectedTrail.route} strokeColor="#5466E8" strokeWidth={6} />
+              <Marker coordinate={selectedTrail.route[0]}>
                 <View style={styles.markerStart} />
               </Marker>
-              <Marker coordinate={routePoints[routePoints.length - 1]}>
+              <Marker coordinate={selectedTrail.route[selectedTrail.route.length - 1]}>
                 <View style={styles.markerEndOuter}>
                   <View style={styles.markerEndInner} />
                 </View>
@@ -339,56 +266,91 @@ export default function StartJourneyScreen() {
             </MapView>
           )}
 
-          <Pressable onPress={() => Haptics.selectionAsync()} style={[styles.mapFloatButton, styles.expandButton]}>
-            <MaterialIcons color="#5F63A3" name="open-in-full" size={24} />
-          </Pressable>
-
-          <View style={styles.zoomColumn}>
-            <Pressable onPress={() => Haptics.selectionAsync()} style={styles.mapFloatButton}>
-              <MaterialIcons color="#5F63A3" name="add" size={24} />
+          <View style={styles.mapOverlayTop}>
+            <View style={styles.statusPill}>
+              <Text style={styles.statusText}>
+                GPS{' '}
+                {permissionState === 'granted'
+                  ? 'connected'
+                  : permissionState === 'denied'
+                    ? 'off'
+                    : 'checking'}
+              </Text>
+            </View>
+            <Pressable onPress={handleRecenter} style={styles.mapIconButton}>
+              <MaterialIcons color="#1D2474" name="my-location" size={20} />
             </Pressable>
-            <Pressable onPress={() => Haptics.selectionAsync()} style={styles.mapFloatButton}>
-              <MaterialIcons color="#5F63A3" name="remove" size={24} />
+          </View>
+
+          <View style={styles.mapOverlayBottom}>
+            {!sessionActive ? (
+              <View style={styles.trailCard}>
+                <View style={styles.trailCardHeader}>
+                  <View style={styles.routeModeChip}>
+                    <MaterialCommunityIcons color="#5466E8" name={activeType.icon as never} size={16} />
+                    <Text style={styles.routeModeChipText}>{activeType.label}</Text>
+                  </View>
+                  <Text style={styles.routeDifficulty}>{selectedTrail.difficulty}</Text>
+                </View>
+
+                <Text style={styles.trailArea}>{selectedTrail.area}</Text>
+                <Text style={styles.trailDescription}>{selectedTrail.description}</Text>
+
+                <View style={styles.trailMetaRow}>
+                  <TrailMeta label="Distance" value={`${selectedTrail.distanceKm.toFixed(1)} km`} />
+                  <TrailMeta label="Estimate" value={selectedTrail.estimatedTime} />
+                </View>
+              </View>
+            ) : null}
+
+            <Pressable
+              disabled={!sessionActive}
+              onPress={async () => {
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                setPaused((value) => !value);
+              }}
+              style={[
+                styles.pauseButton,
+                !sessionActive ? styles.pauseButtonIdle : undefined,
+                !sessionActive ? styles.pauseButtonDisabled : undefined,
+              ]}
+            >
+              <MaterialIcons color="#5466E8" name={paused ? 'play-arrow' : 'pause'} size={34} />
             </Pressable>
           </View>
         </View>
 
-        <Pressable
-          disabled={!sessionActive}
-          onPress={async () => {
-            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            setPaused((value) => !value);
-          }}
-          style={[styles.pauseButton, !sessionActive ? styles.pauseButtonDisabled : undefined]}
-        >
-          <MaterialIcons color="#5466E8" name={paused ? 'play-arrow' : 'pause'} size={36} />
-        </Pressable>
-
-        <View style={styles.bottomSheet}>
-          <View style={styles.modeHeader}>
-            <View style={styles.modeBadge}>
-              <MaterialCommunityIcons color="#5466E8" name={activeType.icon as never} size={18} />
-              <Text style={styles.modeBadgeText}>{activeType.label} mode</Text>
-            </View>
-            <Text style={styles.modeCopy}>
-              {activeType.template === 'cycling'
-                ? 'Ride metrics focused on cadence, speed, and climb.'
-                : 'Foot-travel metrics focused on pace, steps, and elevation.'}
-            </Text>
-          </View>
-
-          <View style={styles.liveRow}>
+        <View style={styles.bottomPanel}>
+          <View style={styles.liveHeader}>
             <View>
               <Text style={styles.liveValue}>{heroValue}</Text>
               <Text style={styles.liveLabel}>{activeType.hero.label}</Text>
             </View>
 
-            <View style={styles.liveActions}>
-              <Pressable onPress={handleRecenter} style={styles.liveActionButton}>
-                <MaterialIcons color="#FFFFFF" name="my-location" size={22} />
+            <View style={styles.liveActionRow}>
+              <Pressable
+                onPress={() => Haptics.selectionAsync()}
+                style={[styles.liveActionButton, styles.liveActionButtonMuted]}
+              >
+                <MaterialIcons color="#6A6F93" name="graphic-eq" size={20} />
               </Pressable>
-              <Pressable onPress={() => Haptics.selectionAsync()} style={[styles.liveActionButton, styles.liveActionButtonPrimary]}>
-                <MaterialIcons color="#FFFFFF" name="graphic-eq" size={22} />
+              <Pressable
+                onPress={async () => {
+                  if (!sessionActive) {
+                    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    setSessionActive(true);
+                    setPaused(false);
+                    return;
+                  }
+
+                  await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  setSessionActive(false);
+                  setPaused(false);
+                }}
+                style={styles.liveActionButtonPrimary}
+              >
+                <MaterialIcons color="#FFFFFF" name={sessionActive ? 'stop-circle' : 'play-circle-filled'} size={22} />
+                <Text style={styles.liveActionPrimaryText}>{sessionActive ? 'Finish' : 'Start'}</Text>
               </Pressable>
             </View>
           </View>
@@ -413,50 +375,11 @@ export default function StartJourneyScreen() {
               <CompactMetric label={activeType.secondaryLabels[2]} value={Math.round(elevationGain).toString()} />
             </View>
           ) : (
-            <View style={styles.cyclingHighlightRow}>
-              <CyclingHighlight
-                label={activeType.secondaryLabels[0]}
-                value={Math.round(80 + averageSpeed * 0.18).toString()}
-              />
-              <CyclingHighlight
-                label={activeType.secondaryLabels[1]}
-                value={Math.round(elevationGain + distanceKm * 4).toString()}
-              />
+            <View style={styles.secondaryRow}>
+              <CompactMetric label={activeType.secondaryLabels[0]} value={Math.round(80 + averageSpeed * 0.18).toString()} />
+              <CompactMetric label={activeType.secondaryLabels[1]} value={Math.round(elevationGain + distanceKm * 4).toString()} />
             </View>
           )}
-
-          <View style={styles.footerRow}>
-            <Pressable
-              onPress={async () => {
-                await Haptics.selectionAsync();
-                router.replace('/(tabs)/choose-path');
-              }}
-              style={styles.footerButton}
-            >
-              <MaterialIcons color="#5466E8" name="arrow-back" size={20} />
-              <Text style={styles.footerButtonText}>Back</Text>
-            </Pressable>
-            <Pressable
-              onPress={async () => {
-                if (!sessionActive) {
-                  await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  setSessionActive(true);
-                  setPaused(false);
-                  return;
-                }
-
-                await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                setSessionActive(false);
-                setPaused(false);
-              }}
-              style={[styles.footerButton, styles.footerButtonPrimary]}
-            >
-              <MaterialIcons color="#FFFFFF" name={sessionActive ? 'stop-circle' : 'play-circle-filled'} size={20} />
-              <Text style={[styles.footerButtonText, styles.footerButtonTextPrimary]}>
-                {sessionActive ? 'Finish' : 'Start'}
-              </Text>
-            </Pressable>
-          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -474,7 +397,7 @@ function TrendChart({
   secondaryColor: string;
   values: number[];
 }) {
-  const width = 292;
+  const width = 300;
   const height = 62;
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -517,6 +440,15 @@ function TrendChart({
   );
 }
 
+function TrailMeta({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.trailMetaCard}>
+      <Text style={styles.trailMetaValue}>{value}</Text>
+      <Text style={styles.trailMetaLabel}>{label}</Text>
+    </View>
+  );
+}
+
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.metricCard}>
@@ -535,15 +467,6 @@ function CompactMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function CyclingHighlight({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.cyclingHighlightCard}>
-      <Text style={styles.cyclingHighlightValue}>{value}</Text>
-      <Text style={styles.cyclingHighlightLabel}>{label}</Text>
-    </View>
-  );
-}
-
 function seedSamples(typeId: string) {
   const base = BASE_SPEEDS[typeId];
   return Array.from({ length: 8 }, (_, index) => base + Math.sin(index * 0.7) * (typeId === 'cycling' ? 2.6 : 0.7));
@@ -555,6 +478,26 @@ function computeNextSample(typeId: string, tick: number, previousValue: number) 
   const drift = Math.sin(tick * 0.75) * amplitude;
   const smoothing = previousValue * 0.35 + base * 0.65;
   return Math.max(2.5, smoothing + drift);
+}
+
+function createRegionFromRoute(route: Coordinate[]) {
+  if (route.length === 0) {
+    return DEFAULT_REGION;
+  }
+
+  const latitudes = route.map((point) => point.latitude);
+  const longitudes = route.map((point) => point.longitude);
+  const minLat = Math.min(...latitudes);
+  const maxLat = Math.max(...latitudes);
+  const minLng = Math.min(...longitudes);
+  const maxLng = Math.max(...longitudes);
+
+  return {
+    latitude: (minLat + maxLat) / 2,
+    longitude: (minLng + maxLng) / 2,
+    latitudeDelta: Math.max((maxLat - minLat) * 1.8, 0.02),
+    longitudeDelta: Math.max((maxLng - minLng) * 1.8, 0.02),
+  };
 }
 
 function formatDuration(seconds: number) {
@@ -584,42 +527,56 @@ function formatPace(speedKmh: number) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8F8FC',
+    backgroundColor: '#F4EFE8',
   },
   container: {
     flex: 1,
-    backgroundColor: '#F8F8FC',
+    backgroundColor: '#F4EFE8',
   },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 22,
-    paddingTop: 10,
-    paddingBottom: 18,
+    paddingHorizontal: 18,
+    paddingTop: 6,
+    paddingBottom: 12,
+    gap: 12,
   },
-  gpsText: {
-    color: '#66657A',
-    fontSize: 16,
-    fontWeight: '500',
+  topCircleButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  topTitleWrap: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  headerEyebrow: {
+    color: '#8A837C',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.3,
   },
   headerTitle: {
     color: '#1D2474',
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
   },
-  topIconButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mapArea: {
+  mapFrame: {
     flex: 1,
-    marginHorizontal: 18,
-    borderRadius: 28,
-    backgroundColor: '#EEF0F7',
+    marginHorizontal: 16,
+    borderRadius: 32,
     overflow: 'hidden',
+    backgroundColor: '#DDE2F7',
     position: 'relative',
   },
   map: {
@@ -660,109 +617,179 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     backgroundColor: '#5466E8',
   },
-  mapFloatButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#B8BED7',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
-  expandButton: {
+  mapOverlayTop: {
     position: 'absolute',
+    top: 18,
     left: 18,
-    top: 18,
-  },
-  zoomColumn: {
-    position: 'absolute',
     right: 18,
-    top: 18,
-    gap: 14,
-  },
-  pauseButton: {
-    position: 'absolute',
-    left: '50%',
-    bottom: 336,
-    marginLeft: -48,
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#C9CDE0',
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-  },
-  pauseButtonDisabled: {
-    opacity: 0.45,
-  },
-  bottomSheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 34,
-    borderTopRightRadius: 34,
-    paddingHorizontal: 22,
-    paddingTop: 24,
-    paddingBottom: 22,
-    gap: 18,
-  },
-  modeHeader: {
-    gap: 8,
-  },
-  modeBadge: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderRadius: 999,
-    backgroundColor: '#EEF1FF',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  modeBadgeText: {
-    color: '#5466E8',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  modeCopy: {
-    color: '#6F7288',
-    fontSize: 14,
-  },
-  liveRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  statusPill: {
+    borderRadius: 999,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  statusText: {
+    color: '#5C5A73',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  mapIconButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapOverlayBottom: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 18,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 12,
+  },
+  trailCard: {
+    flex: 1,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    padding: 16,
+    gap: 10,
+  },
+  trailCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  routeModeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    backgroundColor: '#EEF1FF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  routeModeChipText: {
+    color: '#5466E8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  routeDifficulty: {
+    color: '#8A837C',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  trailArea: {
+    color: '#1B140F',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  trailDescription: {
+    color: '#6E665F',
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  trailMetaRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  trailMetaCard: {
+    flex: 1,
+    borderRadius: 16,
+    backgroundColor: '#F7F4EF',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 4,
+  },
+  trailMetaValue: {
+    color: '#1B140F',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  trailMetaLabel: {
+    color: '#8A837C',
+    fontSize: 12,
+  },
+  pauseButton: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  pauseButtonIdle: {
+    marginLeft: 'auto',
+  },
+  pauseButtonDisabled: {
+    opacity: 0.45,
+  },
+  bottomPanel: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    marginTop: -14,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 20,
+    gap: 16,
+  },
+  liveHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   liveValue: {
     color: '#1D2474',
-    fontSize: 52,
+    fontSize: 42,
     fontWeight: '700',
   },
   liveLabel: {
     color: '#6F7288',
-    fontSize: 16,
+    fontSize: 14,
   },
-  liveActions: {
+  liveActionRow: {
     flexDirection: 'row',
-    gap: 12,
+    alignItems: 'center',
+    gap: 10,
   },
   liveActionButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#9196B4',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  liveActionButtonMuted: {
+    backgroundColor: '#F2F4FB',
+  },
   liveActionButtonPrimary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 24,
     backgroundColor: '#5466E8',
+    paddingHorizontal: 16,
+    height: 48,
+  },
+  liveActionPrimaryText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
   chartCard: {
     borderRadius: 18,
@@ -828,52 +855,5 @@ const styles = StyleSheet.create({
   compactMetricLabel: {
     color: '#6F7288',
     fontSize: 12,
-  },
-  cyclingHighlightRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cyclingHighlightCard: {
-    flex: 1,
-    borderRadius: 18,
-    backgroundColor: '#EEF1FF',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    gap: 6,
-  },
-  cyclingHighlightValue: {
-    color: '#5466E8',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  cyclingHighlightLabel: {
-    color: '#5466E8',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  footerRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  footerButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderRadius: 18,
-    backgroundColor: '#F2F4FB',
-    paddingVertical: 15,
-  },
-  footerButtonPrimary: {
-    backgroundColor: '#5466E8',
-  },
-  footerButtonText: {
-    color: '#5466E8',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  footerButtonTextPrimary: {
-    color: '#FFFFFF',
   },
 });

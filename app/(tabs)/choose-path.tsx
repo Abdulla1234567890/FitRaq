@@ -64,7 +64,7 @@ export default function ChoosePathScreen() {
               onPress={async () => {
                 await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 router.push({
-                  pathname: "/(tabs)/start-journey",
+                  pathname: "/(tabs)/choose-trail",
                   params: {
                     type: option.id,
                   },
