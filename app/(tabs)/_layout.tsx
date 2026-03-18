@@ -91,6 +91,12 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="activity-week"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="nutrition"
         options={{
           title: "Nutrition",
