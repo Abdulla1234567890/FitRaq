@@ -1,7 +1,6 @@
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
   NativeScrollEvent,
@@ -23,70 +22,139 @@ type ProfileState = {
   weight: string;
 };
 
-type IntroPage = {
-  id: string;
+type ProfilePage = {
+  id: 'profile';
   kind: 'profile';
+  subtitle: string;
   title: string;
 };
 
-type QuestionPage = {
+type OptionPage = {
   id: string;
   kind: 'options';
   options: string[];
+  subtitle: string;
   title: string;
 };
 
-type OnboardingPage = IntroPage | QuestionPage;
+type OnboardingPage = ProfilePage | OptionPage;
 
-const ONBOARDING_PAGES: OnboardingPage[] = [
+const CORE_PAGES: OnboardingPage[] = [
   {
     id: 'profile',
     kind: 'profile',
-    title: 'Tell us about\nyourself',
-  },
-  {
-    id: 'movement',
-    kind: 'options',
-    title: 'How do you prefer\nto move?',
-    options: ['High-Intensity Bursts', 'Steady Endurance', 'Mindful Recovery'],
-  },
-  {
-    id: 'terrain',
-    kind: 'options',
-    title: "What's your\nprimary terrain?",
-    options: ['Urban Streets', 'Nature Trails', 'Gym or Studio', 'Home'],
-  },
-  {
-    id: 'elements',
-    kind: 'options',
-    title: 'How do you handle\nthe elements?',
-    options: ['I love the heat', 'I prefer the shade', "I'm an indoor explorer"],
+    title: 'About you',
+    subtitle: 'A few basics to shape the plan.',
   },
   {
     id: 'goal',
     kind: 'options',
-    title: 'What is your\n"North Star"\nfor this journey?',
-    options: ['Building Strength', 'Increasing Stamina', 'Better Sleep', 'Daily Consistency'],
+    title: 'Main goal',
+    subtitle: 'What do you want most right now?',
+    options: ['Lose weight', 'Build fitness', 'Boost endurance', 'Move more'],
   },
   {
-    id: 'frequency',
+    id: 'days',
     kind: 'options',
-    title: 'How many days a\nweek are you\nhitting the trail?',
-    options: ['1-2 (Exploring)', '3-4 (Active)', '5+ (Trailblazer)'],
+    title: 'Days per week',
+    subtitle: 'How often can you realistically train?',
+    options: ['1-2 days', '3-4 days', '5+ days'],
+  },
+  {
+    id: 'movement',
+    kind: 'options',
+    title: 'Preferred movement',
+    subtitle: 'Pick the style that feels most natural.',
+    options: ['Walking', 'Running', 'Cycling', 'Hiking', 'Mix it up'],
   },
   {
     id: 'level',
     kind: 'options',
-    title: `What's your current\n"Basics" level?`,
-    options: ['Just starting out', 'Consistent mover', 'Seasoned active'],
+    title: 'Current level',
+    subtitle: 'Where are you starting from?',
+    options: ['Just starting', 'Getting going', 'Consistent', 'Already active'],
+  },
+  {
+    id: 'challenge',
+    kind: 'options',
+    title: 'Biggest challenge',
+    subtitle: 'What usually gets in the way?',
+    options: ['Staying consistent', 'Eating better', 'Finding time', 'Knowing what to do'],
   },
 ];
+
+const GOAL_BRANCHES: Record<string, OptionPage[]> = {
+  'Lose weight': [
+    {
+      id: 'weight_style',
+      kind: 'options',
+      title: 'Fat-loss style',
+      subtitle: 'What feels sustainable?',
+      options: ['Gentle start', 'Balanced pace', 'More structured'],
+    },
+    {
+      id: 'nutrition_support',
+      kind: 'options',
+      title: 'Nutrition support',
+      subtitle: 'What would help most?',
+      options: ['Portion guidance', 'Meal logging', 'Snack control', 'Protein focus'],
+    },
+  ],
+  'Build fitness': [
+    {
+      id: 'fitness_style',
+      kind: 'options',
+      title: 'Training style',
+      subtitle: 'How do you like to train?',
+      options: ['Short daily', 'Mixed sessions', 'Structured plan'],
+    },
+    {
+      id: 'energy_focus',
+      kind: 'options',
+      title: 'What matters most?',
+      subtitle: 'Pick one main outcome.',
+      options: ['More energy', 'Better strength', 'Better routine', 'General fitness'],
+    },
+  ],
+  'Boost endurance': [
+    {
+      id: 'endurance_focus',
+      kind: 'options',
+      title: 'Endurance focus',
+      subtitle: 'What do you want to improve?',
+      options: ['Go longer', 'Go faster', 'Train more often'],
+    },
+    {
+      id: 'session_preference',
+      kind: 'options',
+      title: 'Session style',
+      subtitle: 'What sounds best?',
+      options: ['Steady sessions', 'Intervals', 'Weekend long effort'],
+    },
+  ],
+  'Move more': [
+    {
+      id: 'routine_anchor',
+      kind: 'options',
+      title: 'Best routine slot',
+      subtitle: 'When is movement easiest?',
+      options: ['Morning', 'Afternoon', 'Evening', 'Flexible'],
+    },
+    {
+      id: 'motivation_style',
+      kind: 'options',
+      title: 'Best motivator',
+      subtitle: 'What helps you keep going?',
+      options: ['Simple goals', 'Daily streaks', 'Light coaching', 'Visible progress'],
+    },
+  ],
+};
 
 const GENDER_OPTIONS = ['Male', 'Female', 'Prefer not to say'];
 
 export default function OnboardingScreen() {
   const { width } = useWindowDimensions();
-  const cardWidth = Math.max(width - 56, 280);
+  const cardWidth = Math.max(width - 48, 296);
   const listRef = useRef<FlatList<OnboardingPage>>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -98,6 +166,19 @@ export default function OnboardingScreen() {
     weight: '',
   });
 
+  const pages = useMemo(() => {
+    const goal = answers.goal;
+    const goalPages = goal ? GOAL_BRANCHES[goal] ?? [] : [];
+    return [...CORE_PAGES, ...goalPages];
+  }, [answers.goal]);
+
+  useEffect(() => {
+    if (currentPage > pages.length - 1) {
+      setCurrentPage(pages.length - 1);
+      listRef.current?.scrollToIndex({ index: pages.length - 1, animated: false });
+    }
+  }, [currentPage, pages.length]);
+
   const vibrateSelection = async () => {
     await Haptics.selectionAsync();
   };
@@ -108,7 +189,7 @@ export default function OnboardingScreen() {
   };
 
   const goToPage = async (page: number) => {
-    if (page < 0 || page >= ONBOARDING_PAGES.length) {
+    if (page < 0 || page >= pages.length) {
       return;
     }
 
@@ -131,9 +212,12 @@ export default function OnboardingScreen() {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setAnswers((current) => ({ ...current, [pageId]: option }));
 
-    if (currentPage < ONBOARDING_PAGES.length - 1) {
-      listRef.current?.scrollToIndex({ index: currentPage + 1, animated: true });
-      setCurrentPage(currentPage + 1);
+    const nextPages = [...CORE_PAGES, ...(pageId === 'goal' ? GOAL_BRANCHES[option] ?? [] : GOAL_BRANCHES[answers.goal] ?? [])];
+    const nextIndex = Math.min(currentPage + 1, nextPages.length - 1);
+
+    if (currentPage < nextPages.length - 1) {
+      listRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+      setCurrentPage(nextIndex);
       return;
     }
 
@@ -147,11 +231,11 @@ export default function OnboardingScreen() {
   const renderProfilePage = () => (
     <View style={styles.profileCard}>
       <View style={styles.fieldGroup}>
-        <Text style={styles.fieldLabel}>What should we call you?</Text>
+        <Text style={styles.fieldLabel}>Name</Text>
         <TextInput
           onChangeText={(value) => updateProfile('name', value)}
-          placeholder="Enter your name"
-          placeholderTextColor="#C9D1FF"
+          placeholder="What should we call you?"
+          placeholderTextColor="#95A0D9"
           style={styles.input}
           value={profile.name}
         />
@@ -164,7 +248,7 @@ export default function OnboardingScreen() {
             keyboardType="number-pad"
             onChangeText={(value) => updateProfile('age', value)}
             placeholder="Years"
-            placeholderTextColor="#C9D1FF"
+            placeholderTextColor="#95A0D9"
             style={styles.input}
             value={profile.age}
           />
@@ -176,46 +260,55 @@ export default function OnboardingScreen() {
             keyboardType="decimal-pad"
             onChangeText={(value) => updateProfile('weight', value)}
             placeholder="kg"
-            placeholderTextColor="#C9D1FF"
+            placeholderTextColor="#95A0D9"
             style={styles.input}
             value={profile.weight}
           />
         </View>
       </View>
 
-      <View style={styles.fieldGroup}>
-        <Text style={styles.fieldLabel}>Height</Text>
-        <TextInput
-          keyboardType="decimal-pad"
-          onChangeText={(value) => updateProfile('height', value)}
-          placeholder="cm"
-          placeholderTextColor="#C9D1FF"
-          style={styles.input}
-          value={profile.height}
-        />
+      <View style={styles.doubleFieldRow}>
+        <View style={styles.halfField}>
+          <Text style={styles.fieldLabel}>Height</Text>
+          <TextInput
+            keyboardType="decimal-pad"
+            onChangeText={(value) => updateProfile('height', value)}
+            placeholder="cm"
+            placeholderTextColor="#95A0D9"
+            style={styles.input}
+            value={profile.height}
+          />
+        </View>
+
+        <View style={styles.halfField}>
+          <Text style={styles.fieldLabel}>Gender</Text>
+          <TextInput
+            editable={false}
+            placeholder={profile.gender || 'Pick below'}
+            placeholderTextColor={profile.gender ? '#FFFFFF' : '#95A0D9'}
+            style={styles.input}
+            value={profile.gender}
+          />
+        </View>
       </View>
 
-      <View style={styles.fieldGroup}>
-        <Text style={styles.fieldLabel}>Gender</Text>
-        <View style={styles.genderList}>
-          {GENDER_OPTIONS.map((option) => {
-            const isSelected = profile.gender === option;
+      <View style={styles.genderGrid}>
+        {GENDER_OPTIONS.map((option) => {
+          const isSelected = profile.gender === option;
 
-            return (
-              <Pressable
-                key={option}
-                onPress={async () => {
-                  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  updateProfile('gender', option);
-                }}
-                style={[styles.optionButton, isSelected ? styles.optionButtonSelected : undefined]}
-              >
-                <MaterialCommunityIcons color="#FFFFFF" name="star-four-points-circle-outline" size={16} />
-                <Text style={styles.optionText}>{option}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+          return (
+            <Pressable
+              key={option}
+              onPress={async () => {
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                updateProfile('gender', option);
+              }}
+              style={[styles.choiceChip, isSelected ? styles.choiceChipSelected : undefined]}
+            >
+              <Text style={[styles.choiceChipText, isSelected ? styles.choiceChipTextSelected : undefined]}>{option}</Text>
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );
@@ -224,9 +317,12 @@ export default function OnboardingScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.frame}>
         <View style={styles.topBar}>
-          <Text style={styles.progressText}>
-            {currentPage + 1}/{ONBOARDING_PAGES.length}
-          </Text>
+          <View style={styles.stepPill}>
+            <Text style={styles.progressText}>
+              {currentPage + 1}/{pages.length}
+            </Text>
+          </View>
+
           <Pressable onPress={finishOnboarding} style={styles.skipButton}>
             <Text style={styles.skipText}>Skip</Text>
           </Pressable>
@@ -234,19 +330,22 @@ export default function OnboardingScreen() {
 
         <FlatList
           ref={listRef}
-          data={ONBOARDING_PAGES}
+          data={pages}
           horizontal
           keyExtractor={(item) => item.id}
           onMomentumScrollEnd={handleScrollEnd}
           pagingEnabled
           renderItem={({ item }) => (
             <View style={[styles.page, { width: cardWidth }]}>
-              <Text style={styles.title}>{item.title}</Text>
+              <View style={styles.headingBlock}>
+                <Text style={styles.title}>{item.title}</Text>
+                <Text style={styles.subtitle}>{item.subtitle}</Text>
+              </View>
 
               {item.kind === 'profile' ? (
                 renderProfilePage()
               ) : (
-                <View style={styles.optionList}>
+                <View style={styles.optionGrid}>
                   {item.options.map((option) => {
                     const isSelected = answers[item.id] === option;
 
@@ -254,14 +353,9 @@ export default function OnboardingScreen() {
                       <Pressable
                         key={option}
                         onPress={() => handleSelect(item.id, option)}
-                        style={[styles.optionButton, isSelected ? styles.optionButtonSelected : undefined]}
+                        style={[styles.choiceCard, isSelected ? styles.choiceCardSelected : undefined]}
                       >
-                        <MaterialCommunityIcons
-                          color="#FFFFFF"
-                          name="star-four-points-circle-outline"
-                          size={16}
-                        />
-                        <Text style={styles.optionText}>{option}</Text>
+                        <Text style={[styles.choiceTitle, isSelected ? styles.choiceTitleSelected : undefined]}>{option}</Text>
                       </Pressable>
                     );
                   })}
@@ -274,7 +368,7 @@ export default function OnboardingScreen() {
 
         <View style={styles.footer}>
           <View style={styles.dotRow}>
-            {ONBOARDING_PAGES.map((page, index) => {
+            {pages.map((page, index) => {
               const isActive = index === currentPage;
 
               return (
@@ -291,22 +385,16 @@ export default function OnboardingScreen() {
             <Pressable
               disabled={currentPage === 0}
               onPress={() => goToPage(currentPage - 1)}
-              style={[styles.navButton, currentPage === 0 ? styles.navButtonDisabled : undefined]}
+              style={[styles.navButtonSecondary, currentPage === 0 ? styles.navButtonSecondaryDisabled : undefined]}
             >
-              <Text style={styles.navButtonText}>Back</Text>
+              <Text style={[styles.navButtonSecondaryText, currentPage === 0 ? styles.navButtonSecondaryTextDisabled : undefined]}>Back</Text>
             </Pressable>
 
             <Pressable
-              onPress={() =>
-                currentPage === ONBOARDING_PAGES.length - 1
-                  ? finishOnboarding()
-                  : goToPage(currentPage + 1)
-              }
-              style={styles.navButton}
+              onPress={() => (currentPage === pages.length - 1 ? finishOnboarding() : goToPage(currentPage + 1))}
+              style={styles.navButtonPrimary}
             >
-              <Text style={styles.navButtonText}>
-                {currentPage === ONBOARDING_PAGES.length - 1 ? 'Finish' : 'Next'}
-              </Text>
+              <Text style={styles.navButtonPrimaryText}>{currentPage === pages.length - 1 ? 'Finish' : 'Next'}</Text>
             </Pressable>
           </View>
         </View>
@@ -323,7 +411,7 @@ const styles = StyleSheet.create({
   frame: {
     flex: 1,
     backgroundColor: '#F4EFE8',
-    paddingHorizontal: 28,
+    paddingHorizontal: 24,
     paddingTop: 8,
     paddingBottom: 24,
   },
@@ -331,10 +419,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  stepPill: {
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   progressText: {
-    color: '#9B928A',
+    color: '#8D847C',
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.4,
@@ -347,33 +441,42 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   skipText: {
-    color: '#B7B3C2',
+    color: '#A59E97',
     fontSize: 12,
     fontWeight: '700',
   },
   page: {
     flex: 1,
+    paddingBottom: 20,
+  },
+  headingBlock: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingBottom: 24,
+    gap: 8,
+    marginTop: 10,
+    marginBottom: 24,
   },
   title: {
     color: '#1B140F',
-    fontSize: 28,
-    lineHeight: 37,
-    fontWeight: '500',
+    fontSize: 30,
+    lineHeight: 34,
+    fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 34,
+  },
+  subtitle: {
+    color: '#7E766F',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
     maxWidth: 260,
   },
   profileCard: {
     width: '100%',
-    gap: 18,
+    gap: 14,
     minHeight: 340,
     justifyContent: 'center',
   },
   fieldGroup: {
-    gap: 10,
+    gap: 8,
   },
   doubleFieldRow: {
     flexDirection: 'row',
@@ -381,63 +484,78 @@ const styles = StyleSheet.create({
   },
   halfField: {
     flex: 1,
-    gap: 10,
+    gap: 8,
   },
   fieldLabel: {
     color: '#1B140F',
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'left',
+    fontSize: 13,
+    fontWeight: '700',
   },
   input: {
-    minHeight: 52,
+    minHeight: 50,
     borderRadius: 18,
     backgroundColor: '#2F42C7',
     color: '#FFFFFF',
     paddingHorizontal: 16,
     fontSize: 14,
-    shadowColor: '#2F42C7',
-    shadowOpacity: 0.16,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
   },
-  genderList: {
-    gap: 14,
-  },
-  optionList: {
-    width: '100%',
-    alignItems: 'center',
-    gap: 24,
-    minHeight: 320,
-    justifyContent: 'center',
-  },
-  optionButton: {
-    minWidth: 148,
-    maxWidth: 232,
-    borderRadius: 999,
-    backgroundColor: '#2F42C7',
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+  genderGrid: {
     flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  optionGrid: {
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'center',
+    minHeight: 320,
+    alignContent: 'center',
+  },
+  choiceCard: {
+    minWidth: '46%',
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    shadowColor: '#2F42C7',
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    borderWidth: 1.5,
+    borderColor: '#E8E1D8',
   },
-  optionButtonSelected: {
-    backgroundColor: '#2236A9',
+  choiceCardSelected: {
+    borderColor: '#2F42C7',
+    backgroundColor: '#EEF1FF',
   },
-  optionText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
+  choiceTitle: {
+    color: '#1B140F',
+    fontSize: 14,
+    fontWeight: '700',
     textAlign: 'center',
-    flexShrink: 1,
+  },
+  choiceTitleSelected: {
+    color: '#2F42C7',
+  },
+  choiceChip: {
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#E8E1D8',
+  },
+  choiceChipSelected: {
+    backgroundColor: '#EEF1FF',
+    borderColor: '#2F42C7',
+  },
+  choiceChipText: {
+    color: '#1B140F',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  choiceChipTextSelected: {
+    color: '#2F42C7',
   },
   footer: {
     alignItems: 'center',
@@ -446,19 +564,19 @@ const styles = StyleSheet.create({
   dotRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     flexWrap: 'wrap',
     justifyContent: 'center',
     minHeight: 16,
   },
   dot: {
-    width: 10,
-    height: 10,
+    width: 8,
+    height: 8,
     borderRadius: 999,
-    backgroundColor: '#D0D0D0',
+    backgroundColor: '#D0CCC6',
   },
   dotActive: {
-    width: 22,
+    width: 20,
     backgroundColor: '#2F42C7',
   },
   footerActions: {
@@ -467,19 +585,34 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  navButton: {
+  navButtonPrimary: {
     flex: 1,
     alignItems: 'center',
-    borderRadius: 16,
+    borderRadius: 18,
     backgroundColor: '#2F42C7',
-    paddingVertical: 14,
+    paddingVertical: 15,
   },
-  navButtonDisabled: {
-    backgroundColor: '#CBD2F8',
-  },
-  navButtonText: {
+  navButtonPrimaryText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
+  },
+  navButtonSecondary: {
+    flex: 1,
+    alignItems: 'center',
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 15,
+  },
+  navButtonSecondaryDisabled: {
+    backgroundColor: '#E7E2DB',
+  },
+  navButtonSecondaryText: {
+    color: '#2F42C7',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  navButtonSecondaryTextDisabled: {
+    color: '#B4ADA6',
   },
 });

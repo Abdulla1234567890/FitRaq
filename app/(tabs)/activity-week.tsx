@@ -1,6 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -8,7 +9,11 @@ import { ACTIVITY_WEEKS } from './activity-program';
 
 export default function ActivityWeekScreen() {
   const params = useLocalSearchParams<{ weekId?: string }>();
-  const week = ACTIVITY_WEEKS.find((item) => item.id === params.weekId) ?? ACTIVITY_WEEKS[0];
+  const initialWeekId = useMemo(() => {
+    return ACTIVITY_WEEKS.find((item) => item.id === params.weekId)?.id ?? ACTIVITY_WEEKS[0].id;
+  }, [params.weekId]);
+  const [selectedWeekId, setSelectedWeekId] = useState(initialWeekId);
+  const week = ACTIVITY_WEEKS.find((item) => item.id === selectedWeekId) ?? ACTIVITY_WEEKS[0];
   const progressValue = week.status === 'completed' ? 100 : week.status === 'current' ? 55 : 0;
 
   return (
@@ -25,10 +30,30 @@ export default function ActivityWeekScreen() {
             <MaterialIcons color="#2F42C7" name="arrow-back-ios-new" size={20} />
           </Pressable>
 
-          <Text style={styles.headerTitle}>{week.title}</Text>
+          <Text style={styles.headerTitle}>Weekly Overview</Text>
 
           <View style={styles.headerSpacer} />
         </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.weekTabs}>
+          {ACTIVITY_WEEKS.map((item) => {
+            const isActive = item.id === week.id;
+
+            return (
+              <Pressable
+                key={item.id}
+                onPress={async () => {
+                  await Haptics.selectionAsync();
+                  setSelectedWeekId(item.id);
+                }}
+                style={[styles.weekTab, isActive ? styles.weekTabActive : undefined]}
+              >
+                <Text style={[styles.weekTabTitle, isActive ? styles.weekTabTitleActive : undefined]}>{item.title}</Text>
+                <Text style={[styles.weekTabState, isActive ? styles.weekTabStateActive : undefined]}>{item.progressLabel}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
 
         <View style={styles.heroCard}>
           <Text style={styles.heroFocus}>{week.focus}</Text>
@@ -119,6 +144,36 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 42,
+  },
+  weekTabs: {
+    gap: 10,
+  },
+  weekTab: {
+    minWidth: 110,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 4,
+  },
+  weekTabActive: {
+    backgroundColor: '#2F42C7',
+  },
+  weekTabTitle: {
+    color: '#1B140F',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  weekTabTitleActive: {
+    color: '#FFFFFF',
+  },
+  weekTabState: {
+    color: '#7E766F',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  weekTabStateActive: {
+    color: '#DCE1FF',
   },
   heroCard: {
     backgroundColor: '#2F42C7',

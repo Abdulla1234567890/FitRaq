@@ -101,17 +101,9 @@ export default function ActivityScreen() {
         <View style={styles.weekCard}>
           <View style={styles.sectionRow}>
             <Text style={styles.sectionTitle}>This week</Text>
-            <Pressable
-              onPress={async () => {
-                await Haptics.selectionAsync();
-                router.push({
-                  pathname: '/(tabs)/activity-week',
-                  params: { weekId: 'week-2' },
-                });
-              }}
-            >
-              <Text style={styles.weekLink}>Overview</Text>
-            </Pressable>
+            <View style={styles.weekPill}>
+              <Text style={styles.weekPillText}>Week 2</Text>
+            </View>
           </View>
 
           <View style={styles.weekStrip}>
@@ -136,6 +128,20 @@ export default function ActivityScreen() {
             <WeekStat label="Streak" value="3 days" />
             <WeekStat label="Week score" value="71%" />
           </View>
+
+          <Pressable
+            onPress={async () => {
+              await Haptics.selectionAsync();
+              router.push({
+                pathname: '/(tabs)/activity-week',
+                params: { weekId: 'week-2' },
+              });
+            }}
+            style={styles.weekOverviewButton}
+          >
+            <Text style={styles.weekOverviewButtonText}>View all weeks</Text>
+            <MaterialIcons color="#2F42C7" name="east" size={18} />
+          </Pressable>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -334,9 +340,15 @@ const styles = StyleSheet.create({
     padding: 18,
     gap: 16,
   },
-  weekLink: {
+  weekPill: {
+    borderRadius: 999,
+    backgroundColor: '#EEF1FF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  weekPillText: {
     color: '#2F42C7',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
   },
   weekStrip: {
@@ -380,6 +392,20 @@ const styles = StyleSheet.create({
   weekStatsRow: {
     flexDirection: 'row',
     gap: 10,
+  },
+  weekOverviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 18,
+    backgroundColor: '#F3F0EB',
+    paddingVertical: 14,
+  },
+  weekOverviewButtonText: {
+    color: '#2F42C7',
+    fontSize: 14,
+    fontWeight: '700',
   },
   weekStat: {
     flex: 1,
