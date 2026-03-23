@@ -1,8 +1,9 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useMemo, useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const TODAY_TASKS = [
   { id: 'steps', label: '8,000 steps', progress: '6.3k / 8k', done: false, icon: 'directions-walk' },
@@ -22,20 +23,107 @@ const WEEK_DAYS = [
 ];
 
 export default function ActivityScreen() {
+  const insets = useSafeAreaInsets();
+  const today = useMemo(() => startOfDay(new Date()), []);
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [displayedMonth, setDisplayedMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  const [calendarExpanded, setCalendarExpanded] = useState(false);
+  const selectedDay = useMemo(() => createCalendarDay(selectedDate, today), [selectedDate, today]);
+  const visibleDays = useMemo(
+    () => Array.from({ length: 7 }, (_, index) => createCalendarDay(addDays(selectedDate, index - 3), today)),
+    [selectedDate, today]
+  );
+  const monthDays = useMemo(() => getMonthDays(displayedMonth, today), [displayedMonth, today]);
+  const monthLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat('en-US', {
+        month: 'long',
+        year: 'numeric',
+      }).format(displayedMonth),
+    [displayedMonth]
+  );
   const completedToday = TODAY_TASKS.filter((task) => task.done).length;
   const completionRatio = completedToday / TODAY_TASKS.length;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['left', 'right']} style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.eyebrow}>DAILY TRACKER</Text>
-            <Text style={styles.title}>Today</Text>
+        <View style={[styles.calendarHero, { paddingTop: insets.top + 14 }]}>
+          <View style={styles.calendarHeroGlow} />
+
+          <View style={styles.calendarHeroTop}>
+            <View>
+              <Text style={styles.eyebrow}>DAILY TRACKER</Text>
+              <Text style={styles.title}>{selectedDay?.isToday ? 'Today' : `${selectedDay?.day} ${selectedDay?.dateNumber}`}</Text>
+              <Text style={styles.calendarHeroSubtext}>Week 2 in progress</Text>
+            </View>
+
+            <View style={styles.headerBadge}>
+              <Text style={styles.headerBadgeText}>{completedToday}/{TODAY_TASKS.length}</Text>
+            </View>
           </View>
 
-          <View style={styles.headerBadge}>
-            <Text style={styles.headerBadgeText}>{completedToday}/{TODAY_TASKS.length}</Text>
+          <View style={styles.calendarCard}>
+            <View style={styles.calendarHeaderInline}>
+              <Text style={styles.calendarMonthHero}>{monthLabel}</Text>
+
+              <Pressable
+                onPress={async () => {
+                  await Haptics.selectionAsync();
+                  setCalendarExpanded(true);
+                }}
+                style={styles.calendarOpenButton}
+              >
+                <MaterialIcons color="#2F42C7" name="calendar-month" size={18} />
+              </Pressable>
+            </View>
+
+            <View style={styles.calendarDivider} />
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.calendarRow}>
+              {visibleDays.map((day) => {
+                const isActive = day.id === selectedDay.id;
+
+                return (
+                  <Pressable
+                    key={day.id}
+                    onPress={async () => {
+                      await Haptics.selectionAsync();
+                      setSelectedDate(day.date);
+                      setDisplayedMonth(new Date(day.date.getFullYear(), day.date.getMonth(), 1));
+                    }}
+                    style={styles.dayItem}
+                  >
+                    <Text
+                      style={[
+                        styles.calendarWeekday,
+                        day.isToday ? styles.calendarWeekdayToday : undefined,
+                        isActive ? styles.calendarWeekdayActive : undefined,
+                      ]}
+                    >
+                      {day.day}
+                    </Text>
+                    <View
+                      style={[
+                        styles.calendarDateCircle,
+                        day.isToday ? styles.calendarDateCircleToday : undefined,
+                        isActive ? styles.calendarDateCircleActive : undefined,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.calendarDateText,
+                          day.isToday ? styles.calendarDateTextToday : undefined,
+                          isActive ? styles.calendarDateTextActive : undefined,
+                        ]}
+                      >
+                        {day.dateNumber}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
           </View>
         </View>
 
@@ -144,6 +232,96 @@ export default function ActivityScreen() {
           </Pressable>
         </View>
       </ScrollView>
+
+      <Modal animationType="fade" onRequestClose={() => setCalendarExpanded(false)} transparent visible={calendarExpanded}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={styles.modalDismissLayer} onPress={() => setCalendarExpanded(false)} />
+
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Pick a date</Text>
+              <Pressable
+                onPress={async () => {
+                  await Haptics.selectionAsync();
+                  setCalendarExpanded(false);
+                }}
+                style={styles.modalCloseButton}
+              >
+                <MaterialIcons color="#2F42C7" name="close" size={20} />
+              </Pressable>
+            </View>
+
+            <View style={styles.modalMonthRow}>
+              <Pressable
+                onPress={async () => {
+                  await Haptics.selectionAsync();
+                  setDisplayedMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1));
+                }}
+                style={styles.calendarNavButton}
+              >
+                <MaterialIcons color="#2F42C7" name="chevron-left" size={22} />
+              </Pressable>
+
+              <Text style={styles.modalMonthLabel}>{monthLabel}</Text>
+
+              <Pressable
+                onPress={async () => {
+                  await Haptics.selectionAsync();
+                  setDisplayedMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1));
+                }}
+                style={styles.calendarNavButton}
+              >
+                <MaterialIcons color="#2F42C7" name="chevron-right" size={22} />
+              </Pressable>
+            </View>
+
+            <View style={styles.monthView}>
+              <View style={styles.monthWeekHeader}>
+                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
+                  <Text key={`${day}-${index}`} style={styles.monthWeekHeaderText}>
+                    {day}
+                  </Text>
+                ))}
+              </View>
+
+              <View style={styles.monthGrid}>
+                {monthDays.map((day) => {
+                  const isActive = day.id === selectedDay.id;
+
+                  return (
+                    <Pressable
+                      key={day.id}
+                      onPress={async () => {
+                        await Haptics.selectionAsync();
+                        setSelectedDate(day.date);
+                        setDisplayedMonth(new Date(day.date.getFullYear(), day.date.getMonth(), 1));
+                        setCalendarExpanded(false);
+                      }}
+                      style={[
+                        styles.monthDayCell,
+                        day.isFaded ? styles.monthDayCellFaded : undefined,
+                        day.isToday ? styles.monthDayCellToday : undefined,
+                        isActive ? styles.monthDayCellActive : undefined,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.monthDayText,
+                          day.isFaded ? styles.monthDayTextFaded : undefined,
+                          day.isToday ? styles.monthDayTextToday : undefined,
+                          isActive ? styles.monthDayTextActive : undefined,
+                        ]}
+                      >
+                        {day.dateNumber}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -157,24 +335,57 @@ function WeekStat({ label, value }: { label: string; value: string }) {
   );
 }
 
+function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function addDays(date: Date, amount: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + amount);
+  return startOfDay(next);
+}
+
+function sameDay(left: Date, right: Date) {
+  return left.toDateString() === right.toDateString();
+}
+
+function createCalendarDay(date: Date, today: Date, isFaded = false) {
+  const weekdayFormatter = new Intl.DateTimeFormat('en-US', { weekday: 'short' });
+
+  return {
+    id: date.toISOString(),
+    date,
+    day: weekdayFormatter.format(date).slice(0, 2).toUpperCase(),
+    dateNumber: `${date.getDate()}`,
+    isToday: sameDay(date, today),
+    isFaded,
+  };
+}
+
+function getMonthDays(displayedMonth: Date, today: Date) {
+  const firstDay = new Date(displayedMonth.getFullYear(), displayedMonth.getMonth(), 1);
+  const startOffset = (firstDay.getDay() + 6) % 7;
+  const startDate = addDays(firstDay, -startOffset);
+
+  return Array.from({ length: 35 }, (_, index) => {
+    const date = addDays(startDate, index);
+    const isFaded = date.getMonth() !== displayedMonth.getMonth();
+    return createCalendarDay(date, today, isFaded);
+  });
+}
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F4EFE8',
   },
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 0,
     paddingBottom: 28,
     gap: 16,
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
   eyebrow: {
-    color: '#8F867F',
+    color: '#6B5F58',
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1.1,
@@ -185,10 +396,40 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 4,
   },
+  calendarHero: {
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    backgroundColor: '#F4EFE8',
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    overflow: 'hidden',
+    gap: 14,
+    position: 'relative',
+  },
+  calendarHeroGlow: {
+    position: 'absolute',
+    left: -40,
+    right: -40,
+    bottom: -30,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(238, 241, 255, 0.9)',
+  },
+  calendarHeroTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  calendarHeroSubtext: {
+    color: '#6B5F58',
+    fontSize: 13,
+    marginTop: 4,
+  },
   headerBadge: {
     minWidth: 56,
     borderRadius: 999,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.75)',
     paddingHorizontal: 14,
     paddingVertical: 10,
     alignItems: 'center',
@@ -198,7 +439,192 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  calendarCard: {
+    paddingTop: 2,
+    paddingBottom: 2,
+    paddingHorizontal: 2,
+    gap: 12,
+  },
+  calendarHeaderInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingHorizontal: 4,
+  },
+  calendarMonthHero: {
+    color: '#1B140F',
+    fontSize: 22,
+    fontWeight: '700',
+    flex: 1,
+    textAlign: 'center',
+  },
+  calendarOpenButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.56)',
+  },
+  calendarDivider: {
+    height: 1,
+    backgroundColor: 'rgba(47, 66, 199, 0.08)',
+    marginHorizontal: 2,
+  },
+  calendarRow: {
+    gap: 18,
+    paddingHorizontal: 6,
+    paddingTop: 2,
+  },
+  dayItem: {
+    width: 42,
+    alignItems: 'center',
+    gap: 10,
+  },
+  calendarWeekday: {
+    color: '#1B140F',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  calendarWeekdayActive: {
+    color: '#2F42C7',
+  },
+  calendarWeekdayToday: {
+    color: '#2F42C7',
+  },
+  calendarDateCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calendarDateCircleActive: {
+    backgroundColor: '#2F42C7',
+    shadowColor: '#2F42C7',
+    shadowOpacity: 0.24,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  calendarDateCircleToday: {
+    backgroundColor: 'rgba(47, 66, 199, 0.08)',
+  },
+  calendarDateText: {
+    color: '#1B140F',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  calendarDateTextToday: {
+    color: '#2F42C7',
+  },
+  calendarDateTextActive: {
+    color: '#FFFFFF',
+  },
+  monthView: {
+    gap: 12,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(18, 15, 12, 0.22)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  modalDismissLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  modalCard: {
+    backgroundColor: '#F8F4EE',
+    borderRadius: 28,
+    padding: 18,
+    gap: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modalTitle: {
+    color: '#1B140F',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  modalCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalMonthRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  calendarNavButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalMonthLabel: {
+    color: '#2F42C7',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  monthWeekHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 4,
+  },
+  monthWeekHeaderText: {
+    width: '14.2%',
+    textAlign: 'center',
+    color: '#8F867F',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  monthGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: 10,
+  },
+  monthDayCell: {
+    width: '14.28%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 16,
+  },
+  monthDayCellFaded: {
+    opacity: 0.38,
+  },
+  monthDayCellToday: {
+    backgroundColor: 'rgba(47, 66, 199, 0.08)',
+  },
+  monthDayCellActive: {
+    backgroundColor: '#2F42C7',
+  },
+  monthDayText: {
+    color: '#1B140F',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  monthDayTextFaded: {
+    color: '#8F867F',
+  },
+  monthDayTextToday: {
+    color: '#2F42C7',
+  },
+  monthDayTextActive: {
+    color: '#FFFFFF',
+  },
   heroCard: {
+    marginHorizontal: 20,
     backgroundColor: '#2F42C7',
     borderRadius: 28,
     padding: 20,
@@ -264,6 +690,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   sectionRow: {
+    marginHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -279,6 +706,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   taskList: {
+    paddingHorizontal: 20,
     gap: 10,
   },
   taskCard: {
@@ -335,6 +763,7 @@ const styles = StyleSheet.create({
     color: '#2F42C7',
   },
   weekCard: {
+    marginHorizontal: 20,
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 18,

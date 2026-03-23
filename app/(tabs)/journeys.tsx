@@ -2,8 +2,11 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { TRAILS, type Coordinate } from './journey-data';
 
 const FILTERS = ['All', 'Walks', 'Runs', 'Hikes'] as const;
 
@@ -15,6 +18,7 @@ const JOURNEYS = [
     location: 'Al Qouz, Dubai',
     month: 'February 2026',
     title: 'Morning Run',
+    trailId: 'run-downtown-loop',
     type: 'Runs',
     xp: '78 XP',
   },
@@ -25,6 +29,7 @@ const JOURNEYS = [
     location: 'Business Bay, Dubai',
     month: 'February 2026',
     title: 'Sunset Walk',
+    trailId: 'walk-marina-stroll',
     type: 'Walks',
     xp: '52 XP',
   },
@@ -35,6 +40,7 @@ const JOURNEYS = [
     location: 'Dubai Creek, Dubai',
     month: 'January 2026',
     title: 'Creek Hike',
+    trailId: 'hike-hatta-ridge',
     type: 'Hikes',
     xp: '96 XP',
   },
@@ -97,44 +103,87 @@ export default function JourneysScreen() {
           <View key={month} style={styles.monthSection}>
             <Text style={styles.monthLabel}>{month}</Text>
 
-            {items.map((journey) => (
-              <Pressable
-                key={journey.id}
-                onPress={async () => {
-                  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push({
-                    pathname: '/(tabs)/journey-details',
-                    params: {
-                      date: journey.date,
-                      distance: journey.distance,
-                      location: journey.location,
-                      title: journey.title,
-                      xp: journey.xp,
-                    },
-                  });
-                }}
-                style={styles.cardWrap}
-              >
-                <View style={styles.mapCard}>
-                  <View style={styles.mapWater} />
-                  <View style={styles.mapLand} />
-                  <View style={styles.mapRoadOne} />
-                  <View style={styles.mapRoadTwo} />
-                  <View style={styles.mapRoadThree} />
+            {items.map((journey) => {
+              const trail = TRAILS.find((item) => item.id === journey.trailId) ?? TRAILS[0];
+              const region = createRegionFromRoute(trail.route);
 
-                  <Text style={styles.cardLocation}>{journey.location.split(',')[0]}</Text>
-                  <View style={styles.cardMeta}>
-                    <Text style={styles.cardTitle}>{journey.title}</Text>
-                    <Text style={styles.cardDistance}>{journey.distance}</Text>
+              return (
+                <Pressable
+                  key={journey.id}
+                  onPress={async () => {
+                    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.push({
+                      pathname: '/(tabs)/journey-details',
+                      params: {
+                        date: journey.date,
+                        distance: journey.distance,
+                        location: journey.location,
+                        title: journey.title,
+                        xp: journey.xp,
+                      },
+                    });
+                  }}
+                  style={styles.cardWrap}
+                >
+                  <View style={styles.mapCard}>
+                    {Platform.OS === 'web' ? (
+                      <View style={styles.webFallback}>
+                        <MaterialIcons color="#2F42C7" name="map" size={36} />
+                      </View>
+                    ) : (
+                      <MapView
+                        initialRegion={region}
+                        pointerEvents="none"
+                        rotateEnabled={false}
+                        scrollEnabled={false}
+                        showsCompass={false}
+                        showsPointsOfInterest={false}
+                        showsScale={false}
+                        style={styles.map}
+                        zoomEnabled={false}
+                      >
+                        <Polyline coordinates={trail.route} strokeColor="#2F42C7" strokeWidth={4} />
+                        <Marker coordinate={trail.route[0]}>
+                          <View style={styles.routeDotStart} />
+                        </Marker>
+                        <Marker coordinate={trail.route[trail.route.length - 1]}>
+                          <View style={styles.routeDotEnd} />
+                        </Marker>
+                      </MapView>
+                    )}
+
+                    <View style={styles.mapOverlay}>
+                      <Text style={styles.cardLocation}>{journey.location.split(',')[0]}</Text>
+                      <View style={styles.cardMeta}>
+                        <Text style={styles.cardTitle}>{journey.title}</Text>
+                        <Text style={styles.cardDistance}>{journey.distance}</Text>
+                      </View>
+                    </View>
                   </View>
-                </View>
-              </Pressable>
-            ))}
+                </Pressable>
+              );
+            })}
           </View>
         ))}
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function createRegionFromRoute(route: Coordinate[]) {
+  const latitudes = route.map((point) => point.latitude);
+  const longitudes = route.map((point) => point.longitude);
+  const minLat = Math.min(...latitudes);
+  const maxLat = Math.max(...latitudes);
+  const minLng = Math.min(...longitudes);
+  const maxLng = Math.max(...longitudes);
+
+  return {
+    latitude: (minLat + maxLat) / 2,
+    longitude: (minLng + maxLng) / 2,
+    latitudeDelta: Math.max((maxLat - minLat) * 2, 0.03),
+    longitudeDelta: Math.max((maxLng - minLng) * 2, 0.03),
+  };
 }
 
 const styles = StyleSheet.create({
@@ -213,66 +262,36 @@ const styles = StyleSheet.create({
   mapCard: {
     height: 160,
     borderRadius: 34,
-    backgroundColor: '#4678C7',
+    backgroundColor: '#E0DBD3',
     overflow: 'hidden',
-    justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingVertical: 18,
     shadowColor: '#000000',
     shadowOpacity: 0.14,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 5 },
     elevation: 3,
   },
-  mapWater: {
-    position: 'absolute',
-    inset: 0,
-    backgroundColor: '#4678C7',
+  map: {
+    ...StyleSheet.absoluteFillObject,
   },
-  mapLand: {
-    position: 'absolute',
-    left: -40,
-    top: -20,
-    width: 170,
-    height: 200,
-    borderTopRightRadius: 100,
-    borderBottomRightRadius: 90,
-    backgroundColor: '#18345B',
+  webFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  mapRoadOne: {
-    position: 'absolute',
-    top: 24,
-    left: 70,
-    width: 260,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: 'rgba(5,19,46,0.65)',
-    transform: [{ rotate: '-20deg' }],
-  },
-  mapRoadTwo: {
-    position: 'absolute',
-    top: 74,
-    left: -24,
-    width: 280,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: 'rgba(5,19,46,0.65)',
-    transform: [{ rotate: '16deg' }],
-  },
-  mapRoadThree: {
-    position: 'absolute',
-    bottom: 34,
-    left: 50,
-    width: 230,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: 'rgba(5,19,46,0.65)',
-    transform: [{ rotate: '-8deg' }],
+  mapOverlay: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    backgroundColor: 'rgba(12, 21, 46, 0.12)',
   },
   cardLocation: {
     color: '#F5F7FF',
     fontSize: 14,
     fontWeight: '600',
+    textShadowColor: 'rgba(0,0,0,0.25)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   cardMeta: {
     gap: 4,
@@ -281,9 +300,28 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 22,
     fontWeight: '600',
+    textShadowColor: 'rgba(0,0,0,0.25)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   cardDistance: {
     color: '#DCE6FF',
     fontSize: 14,
+  },
+  routeDotStart: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 3,
+    borderColor: '#2F42C7',
+  },
+  routeDotEnd: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#2F42C7',
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
   },
 });

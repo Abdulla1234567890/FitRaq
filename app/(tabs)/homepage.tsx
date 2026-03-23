@@ -1,11 +1,15 @@
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { TRAILS, type Coordinate } from './journey-data';
+
 export default function HomePageScreen() {
+  const latestTrail = TRAILS[0];
   const params = useLocalSearchParams<{ name?: string }>();
   const firstName = useMemo(() => {
     const rawName = Array.isArray(params.name) ? params.name[0] : params.name;
@@ -21,6 +25,8 @@ export default function HomePageScreen() {
       }).format(new Date()),
     []
   );
+
+  const mapRegion = useMemo(() => createRegionFromRoute(latestTrail.route), [latestTrail.route]);
 
   const handleStartJourney = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -79,20 +85,37 @@ export default function HomePageScreen() {
         </View>
 
         <View style={styles.mapCard}>
-          <View style={styles.waterShape} />
-          <View style={styles.coastShape} />
-          <View style={styles.roadOne} />
-          <View style={styles.roadTwo} />
-          <View style={styles.roadThree} />
+          {Platform.OS === 'web' ? (
+            <View style={styles.webFallback}>
+              <MaterialIcons color="#2F42C7" name="map" size={42} />
+              <Text style={styles.webFallbackText}>Map preview is available on iOS and Android.</Text>
+            </View>
+          ) : (
+            <MapView
+              initialRegion={mapRegion}
+              pointerEvents="none"
+              rotateEnabled={false}
+              scrollEnabled={false}
+              showsCompass={false}
+              showsPointsOfInterest={false}
+              showsScale={false}
+              style={styles.map}
+              zoomEnabled={false}
+            >
+              <Polyline coordinates={latestTrail.route} strokeColor="#2F42C7" strokeWidth={5} />
+              <Marker coordinate={latestTrail.route[0]}>
+                <View style={styles.routeDotStart} />
+              </Marker>
+              <Marker coordinate={latestTrail.route[latestTrail.route.length - 1]}>
+                <View style={styles.routeDotEnd} />
+              </Marker>
+            </MapView>
+          )}
 
-          <View style={styles.routeWrap}>
-            <View style={styles.routeDotStart} />
-            <View style={styles.routeLine} />
-            <View style={styles.routeDotEnd} />
+          <View style={styles.mapOverlay}>
+            <Text style={styles.mapMetaLabel}>{latestTrail.area}</Text>
+            <Text style={styles.mapMetaTitle}>{latestTrail.title}</Text>
           </View>
-
-          <Text style={[styles.mapLabel, styles.mapLabelDubai]}>Dubai</Text>
-          <Text style={[styles.mapLabel, styles.mapLabelSharjah]}>Sharjah</Text>
 
           <Pressable onPress={handleStartJourney} style={styles.startButton}>
             <Text style={styles.startButtonText}>Start Journey!</Text>
@@ -101,6 +124,22 @@ export default function HomePageScreen() {
       </ScrollView>
     </SafeAreaView>
   );
+}
+
+function createRegionFromRoute(route: Coordinate[]) {
+  const latitudes = route.map((point) => point.latitude);
+  const longitudes = route.map((point) => point.longitude);
+  const minLat = Math.min(...latitudes);
+  const maxLat = Math.max(...latitudes);
+  const minLng = Math.min(...longitudes);
+  const maxLng = Math.max(...longitudes);
+
+  return {
+    latitude: (minLat + maxLat) / 2,
+    longitude: (minLng + maxLng) / 2,
+    latitudeDelta: Math.max((maxLat - minLat) * 1.9, 0.02),
+    longitudeDelta: Math.max((maxLng - minLng) * 1.9, 0.02),
+  };
 }
 
 const styles = StyleSheet.create({
@@ -204,107 +243,61 @@ const styles = StyleSheet.create({
   mapCard: {
     height: 430,
     borderRadius: 32,
-    backgroundColor: '#DCC7A7',
+    backgroundColor: '#E6E0D7',
     overflow: 'hidden',
     position: 'relative',
   },
-  waterShape: {
-    position: 'absolute',
-    top: -30,
-    left: -70,
-    width: 300,
-    height: 360,
-    borderBottomRightRadius: 220,
-    borderTopRightRadius: 180,
-    borderBottomLeftRadius: 180,
-    backgroundColor: '#4766A8',
+  map: {
+    ...StyleSheet.absoluteFillObject,
   },
-  coastShape: {
-    position: 'absolute',
-    right: -60,
-    top: -10,
-    width: 240,
-    height: 450,
-    borderTopLeftRadius: 140,
-    borderBottomLeftRadius: 120,
-    backgroundColor: '#E8D1AF',
-    transform: [{ rotate: '8deg' }],
-  },
-  roadOne: {
-    position: 'absolute',
-    right: 20,
-    top: 110,
-    width: 210,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: '#D9D9D9',
-    transform: [{ rotate: '-38deg' }],
-  },
-  roadTwo: {
-    position: 'absolute',
-    right: -10,
-    top: 220,
-    width: 240,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: '#D9D9D9',
-    transform: [{ rotate: '-28deg' }],
-  },
-  roadThree: {
-    position: 'absolute',
-    right: 30,
-    bottom: 110,
-    width: 180,
-    height: 8,
-    borderRadius: 999,
-    backgroundColor: '#D9D9D9',
-    transform: [{ rotate: '-12deg' }],
-  },
-  routeWrap: {
-    position: 'absolute',
-    left: 138,
-    top: 144,
+  webFallback: {
+    flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingHorizontal: 28,
+  },
+  webFallbackText: {
+    color: '#2F42C7',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  mapOverlay: {
+    position: 'absolute',
+    top: 18,
+    left: 18,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.88)',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 2,
+  },
+  mapMetaLabel: {
+    color: '#756C65',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  mapMetaTitle: {
+    color: '#1B140F',
+    fontSize: 16,
+    fontWeight: '700',
   },
   routeDotStart: {
     width: 14,
     height: 14,
     borderRadius: 7,
     backgroundColor: '#FFFFFF',
-    borderWidth: 3,
+    borderWidth: 4,
     borderColor: '#2F42C7',
   },
-  routeLine: {
-    width: 4,
-    height: 120,
-    backgroundColor: '#2F42C7',
-    borderRadius: 999,
-    marginVertical: 4,
-  },
   routeDotEnd: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: '#2F42C7',
     borderWidth: 4,
-    borderColor: '#FFFFFF',
-  },
-  mapLabel: {
-    position: 'absolute',
-    color: 'rgba(255,255,255,0.92)',
-    fontSize: 26,
-    fontWeight: '700',
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  mapLabelDubai: {
-    left: 148,
-    top: 170,
-  },
-  mapLabelSharjah: {
-    left: 218,
-    top: 94,
+    borderColor: 'rgba(255,255,255,0.8)',
   },
   startButton: {
     position: 'absolute',
