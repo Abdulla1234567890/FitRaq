@@ -10,25 +10,29 @@ const PATH_OPTIONS = [
     id: "running",
     image: require("@/assets/images/Running.png"),
     label: "Running",
-    tint: "#FFFFFF",
+    accent: "#2F42C7",
+    tint: "#EEF1FF",
   },
   {
     id: "walking",
     image: require("@/assets/images/Walking.png"),
     label: "Walking",
-    tint: "#CFC7F5",
+    accent: "#6A73D6",
+    tint: "#F1F0FF",
   },
   {
     id: "cycling",
     image: require("@/assets/images/Cycling.png"),
     label: "Cycling",
-    tint: "#B3B3B3",
+    accent: "#4C72BA",
+    tint: "#EEF5FF",
   },
   {
     id: "hiking",
     image: require("@/assets/images/Hiking.png"),
     label: "Hiking",
-    tint: "#C7E69C",
+    accent: "#7D9B52",
+    tint: "#F1F7E8",
   },
 ];
 
@@ -47,7 +51,7 @@ export default function ChoosePathScreen() {
             }}
             style={styles.iconButton}
           >
-            <MaterialIcons color="#2F42C7" name="menu" size={34} />
+            <MaterialIcons color="#2F42C7" name="arrow-back-ios-new" size={22} />
           </Pressable>
 
           <Text style={styles.headerTitle}>Journey</Text>
@@ -55,7 +59,11 @@ export default function ChoosePathScreen() {
           <View style={styles.headerSpacer} />
         </View>
 
-        <Text style={styles.pageTitle}>Choose Your Path</Text>
+        <View style={styles.introCard}>
+          <Text style={styles.eyebrow}>START A SESSION</Text>
+          <Text style={styles.pageTitle}>Choose your path</Text>
+          <Text style={styles.pageSubtitle}>Pick the type of journey first, then we&apos;ll show matching routes.</Text>
+        </View>
 
         <View style={styles.cardList}>
           {PATH_OPTIONS.map((option) => (
@@ -72,7 +80,11 @@ export default function ChoosePathScreen() {
               }}
               style={[styles.pathCard, { backgroundColor: option.tint }]}
             >
-              <Text style={styles.pathLabel}>{option.label}</Text>
+              <View style={styles.pathInfo}>
+                <View style={[styles.pathAccent, { backgroundColor: option.accent }]} />
+                <Text style={styles.pathLabel}>{option.label}</Text>
+                <Text style={styles.pathMeta}>View routes</Text>
+              </View>
               <Image
                 contentFit="contain"
                 source={option.image}
@@ -95,18 +107,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 10,
     paddingBottom: 28,
+    gap: 18,
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 30,
   },
   iconButton: {
     width: 44,
     height: 44,
     alignItems: "center",
     justifyContent: "center",
+    borderRadius: 22,
+    backgroundColor: "#FFFFFF",
   },
   headerTitle: {
     color: "#2F42C7",
@@ -116,37 +130,69 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 44,
   },
+  introCard: {
+    backgroundColor: "#FBF9F5",
+    borderRadius: 26,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    gap: 8,
+  },
+  eyebrow: {
+    color: "#8F867F",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1.1,
+  },
   pageTitle: {
     color: "#1B140F",
-    fontSize: 36,
-    fontWeight: "500",
-    textAlign: "center",
-    marginBottom: 28,
+    fontSize: 32,
+    fontWeight: "600",
+  },
+  pageSubtitle: {
+    color: "#756C65",
+    fontSize: 14,
+    lineHeight: 21,
   },
   cardList: {
-    gap: 18,
+    gap: 14,
   },
   pathCard: {
     height: 125,
-    borderRadius: 22,
-    paddingLeft: 24,
+    borderRadius: 24,
+    paddingLeft: 20,
     paddingRight: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     shadowColor: "#000000",
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: "rgba(47,66,199,0.08)",
+  },
+  pathInfo: {
+    flex: 1,
+    gap: 6,
+  },
+  pathAccent: {
+    width: 38,
+    height: 4,
+    borderRadius: 999,
   },
   pathLabel: {
     color: "#1B140F",
-    fontSize: 18,
-    fontWeight: "500",
+    fontSize: 22,
+    fontWeight: "600",
+  },
+  pathMeta: {
+    color: "#756C65",
+    fontSize: 13,
+    fontWeight: "600",
   },
   pathImage: {
-    width: 124,
-    height: 120,
+    width: 126,
+    height: 116,
   },
 });

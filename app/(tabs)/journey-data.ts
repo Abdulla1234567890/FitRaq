@@ -23,6 +23,10 @@ export type Trail = {
   difficulty: string;
   distanceKm: number;
   estimatedTime: string;
+  gallery: {
+    caption: string;
+    image: number;
+  }[];
   id: string;
   route: Coordinate[];
   title: string;
@@ -86,6 +90,11 @@ export const TRAILS: Trail[] = [
     estimatedTime: '34 min',
     difficulty: 'Moderate',
     description: 'Fast city loop with long straights and smooth pace segments.',
+    gallery: [
+      { image: require('@/assets/images/Running.png'), caption: 'Skyline start' },
+      { image: require('@/assets/images/Running.png'), caption: 'Straight pace segment' },
+      { image: require('@/assets/images/Running.png'), caption: 'Finish beside the boulevard' },
+    ],
     route: [
       { latitude: 25.2018, longitude: 55.2682 },
       { latitude: 25.2042, longitude: 55.2728 },
@@ -103,6 +112,11 @@ export const TRAILS: Trail[] = [
     estimatedTime: '43 min',
     difficulty: 'Moderate',
     description: 'Waterfront route suited for tempo efforts and progression runs.',
+    gallery: [
+      { image: require('@/assets/images/Running.png'), caption: 'Canal warm-up stretch' },
+      { image: require('@/assets/images/Running.png'), caption: 'Tempo-ready waterfront lane' },
+      { image: require('@/assets/images/Running.png'), caption: 'Night lights on the cool-down' },
+    ],
     route: [
       { latitude: 25.1908, longitude: 55.2551 },
       { latitude: 25.1935, longitude: 55.2592 },
@@ -120,6 +134,11 @@ export const TRAILS: Trail[] = [
     estimatedTime: '39 min',
     difficulty: 'Easy',
     description: 'Relaxed flat route with easy turns and steady walking segments.',
+    gallery: [
+      { image: require('@/assets/images/Walking.png'), caption: 'Waterfront entrance' },
+      { image: require('@/assets/images/Walking.png'), caption: 'Easy shaded boardwalk' },
+      { image: require('@/assets/images/Walking.png'), caption: 'Sunset finish by the marina' },
+    ],
     route: [
       { latitude: 25.1976, longitude: 55.2641 },
       { latitude: 25.1985, longitude: 55.2664 },
@@ -137,6 +156,11 @@ export const TRAILS: Trail[] = [
     estimatedTime: '55 min',
     difficulty: 'Easy',
     description: 'Scenic heritage walk with open views and slower cruising pace.',
+    gallery: [
+      { image: require('@/assets/images/Walking.png'), caption: 'Heritage side start' },
+      { image: require('@/assets/images/Walking.png'), caption: 'Quiet creekside stretch' },
+      { image: require('@/assets/images/Walking.png'), caption: 'Boardwalk finish with open views' },
+    ],
     route: [
       { latitude: 25.2621, longitude: 55.3016 },
       { latitude: 25.2632, longitude: 55.3044 },
@@ -154,6 +178,11 @@ export const TRAILS: Trail[] = [
     estimatedTime: '30 min',
     difficulty: 'Moderate',
     description: 'Wide open ride with strong cadence sections and steady speed.',
+    gallery: [
+      { image: require('@/assets/images/Cycling.png'), caption: 'Open desert start' },
+      { image: require('@/assets/images/Cycling.png'), caption: 'Long cadence-friendly straight' },
+      { image: require('@/assets/images/Cycling.png'), caption: 'Fast return section' },
+    ],
     route: [
       { latitude: 24.9152, longitude: 55.3731 },
       { latitude: 24.9195, longitude: 55.3792 },
@@ -171,6 +200,11 @@ export const TRAILS: Trail[] = [
     estimatedTime: '49 min',
     difficulty: 'Moderate',
     description: 'Coastal spin with cleaner straights and lighter turns.',
+    gallery: [
+      { image: require('@/assets/images/Cycling.png'), caption: 'Beachfront rollout' },
+      { image: require('@/assets/images/Cycling.png'), caption: 'Coastal speed section' },
+      { image: require('@/assets/images/Cycling.png'), caption: 'Smooth city return' },
+    ],
     route: [
       { latitude: 25.1704, longitude: 55.2142 },
       { latitude: 25.1741, longitude: 55.2205 },
@@ -188,6 +222,11 @@ export const TRAILS: Trail[] = [
     estimatedTime: '1h 42m',
     difficulty: 'Challenging',
     description: 'Rocky climbing trail with elevation and panoramic ridge views.',
+    gallery: [
+      { image: require('@/assets/images/Hiking.png'), caption: 'Trailhead approach' },
+      { image: require('@/assets/images/Hiking.png'), caption: 'Ridge climb section' },
+      { image: require('@/assets/images/Hiking.png'), caption: 'Panoramic lookout finish' },
+    ],
     route: [
       { latitude: 24.8124, longitude: 56.1181 },
       { latitude: 24.8142, longitude: 56.1218 },
@@ -205,6 +244,11 @@ export const TRAILS: Trail[] = [
     estimatedTime: '2h 08m',
     difficulty: 'Challenging',
     description: 'Longer trek with uneven terrain and stronger elevation gain.',
+    gallery: [
+      { image: require('@/assets/images/Hiking.png'), caption: 'Wadi entry point' },
+      { image: require('@/assets/images/Hiking.png'), caption: 'Rocky ascent section' },
+      { image: require('@/assets/images/Hiking.png'), caption: 'Summit-side traverse' },
+    ],
     route: [
       { latitude: 25.9104, longitude: 56.1374 },
       { latitude: 25.9131, longitude: 56.1411 },

@@ -1,19 +1,55 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import {
+  FlatList,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ACTIVITY_TYPES, TRAILS } from './journey-data';
+import { ACTIVITY_TYPES, TRAILS, type Trail } from './journey-data';
 
 export default function ChooseTrailScreen() {
   const params = useLocalSearchParams<{ type?: string }>();
+  const { width } = useWindowDimensions();
   const selectedType = ACTIVITY_TYPES.find((type) => type.id === params.type) ?? ACTIVITY_TYPES[0];
   const trails = TRAILS.filter((trail) => trail.type === selectedType.id);
+  const [activeSlides, setActiveSlides] = useState<Record<string, number>>({});
+  const cardWidth = width - 40;
+
+  const handleOpenTrail = async (trail: Trail) => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push({
+      pathname: '/(tabs)/start-journey',
+      params: {
+        trail: trail.id,
+        type: selectedType.id,
+      },
+    });
+  };
+
+  const handleGalleryEnd = (trailId: string, event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const pageWidth = event.nativeEvent.layoutMeasurement.width;
+    const nextIndex = Math.round(event.nativeEvent.contentOffset.x / pageWidth);
+
+    setActiveSlides((current) => ({
+      ...current,
+      [trailId]: nextIndex,
+    }));
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
           <Pressable
             onPress={async () => {
@@ -32,59 +68,94 @@ export default function ChooseTrailScreen() {
 
         <View style={styles.introCard}>
           <Text style={styles.introEyebrow}>{selectedType.label.toUpperCase()}</Text>
-          <Text style={styles.introTitle}>Choose a route from the trail database</Text>
+          <Text style={styles.introTitle}>Pick a trail from the photos</Text>
           <Text style={styles.introCopy}>
-            Pick a saved path first, then we&apos;ll open the live map already focused on that route.
+            Swipe inside each trail card to preview the vibe, then open the route you want.
           </Text>
         </View>
 
-        <View style={styles.cardList}>
-          {trails.map((trail) => (
-            <Pressable
-              key={trail.id}
-              onPress={async () => {
-                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push({
-                  pathname: '/(tabs)/start-journey',
-                  params: {
-                    trail: trail.id,
-                    type: selectedType.id,
-                  },
-                });
-              }}
-              style={styles.trailCard}
-            >
-              <View style={styles.trailCardHeader}>
-                <View>
-                  <Text style={styles.trailTitle}>{trail.title}</Text>
-                  <Text style={styles.trailArea}>{trail.area}</Text>
+        <View style={styles.trailList}>
+          {trails.map((trail) => {
+            const activeSlide = activeSlides[trail.id] ?? 0;
+
+            return (
+              <View key={trail.id} style={styles.trailCard}>
+                <View style={styles.previewFrame}>
+                  <FlatList
+                    data={trail.gallery}
+                    horizontal
+                    keyExtractor={(item, index) => `${trail.id}-gallery-${index}`}
+                    onMomentumScrollEnd={(event) => handleGalleryEnd(trail.id, event)}
+                    pagingEnabled
+                    renderItem={({ item }) => (
+                      <View style={[styles.gallerySlide, { width: cardWidth - 2 }]}>
+                        <Image contentFit="cover" source={item.image} style={styles.previewImage} />
+                        <View style={styles.previewOverlay}>
+                          <View style={styles.previewTopRow}>
+                            <View style={styles.previewBadge}>
+                              <Text style={styles.previewBadgeText}>{trail.difficulty}</Text>
+                            </View>
+
+                            <View style={styles.previewCountBadge}>
+                              <Text style={styles.previewCountText}>
+                                {activeSlide + 1}/{trail.gallery.length}
+                              </Text>
+                            </View>
+                          </View>
+
+                          <View style={styles.previewBottomCopy}>
+                            <Text style={styles.previewArea}>{trail.area}</Text>
+                            <Text style={styles.previewCaption}>{item.caption}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    )}
+                    showsHorizontalScrollIndicator={false}
+                  />
+
+                  <View style={styles.photoDotRow}>
+                    {trail.gallery.map((_, index) => (
+                      <View
+                        key={`${trail.id}-dot-${index}`}
+                        style={[
+                          styles.photoDot,
+                          index === activeSlide ? styles.photoDotActive : undefined,
+                        ]}
+                      />
+                    ))}
+                  </View>
                 </View>
-                <View style={styles.difficultyBadge}>
-                  <Text style={styles.difficultyText}>{trail.difficulty}</Text>
+
+                <View style={styles.trailBody}>
+                  <View style={styles.titleRow}>
+                    <Text style={styles.trailTitle}>{trail.title}</Text>
+                    <Pressable onPress={() => handleOpenTrail(trail)} style={styles.inlineOpenButton}>
+                      <Text style={styles.inlineOpenButtonText}>Open</Text>
+                    </Pressable>
+                  </View>
+
+                  <Text style={styles.trailCopy}>{trail.description}</Text>
+
+                  <View style={styles.metaRow}>
+                    <MetaPill label={`${trail.distanceKm.toFixed(1)} km`} />
+                    <MetaPill label={trail.estimatedTime} />
+                    <MetaPill label={selectedType.label} />
+                  </View>
                 </View>
               </View>
-
-              <Text style={styles.trailDescription}>{trail.description}</Text>
-
-              <View style={styles.trailMetaRow}>
-                <View style={styles.metaItem}>
-                  <Text style={styles.metaValue}>{trail.distanceKm.toFixed(1)} km</Text>
-                  <Text style={styles.metaLabel}>Distance</Text>
-                </View>
-                <View style={styles.metaItem}>
-                  <Text style={styles.metaValue}>{trail.estimatedTime}</Text>
-                  <Text style={styles.metaLabel}>Estimated</Text>
-                </View>
-                <View style={styles.metaItem}>
-                  <Text style={styles.metaValue}>{selectedType.label}</Text>
-                  <Text style={styles.metaLabel}>Mode</Text>
-                </View>
-              </View>
-            </Pressable>
-          ))}
+            );
+          })}
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function MetaPill({ label }: { label: string }) {
+  return (
+    <View style={styles.metaPill}>
+      <Text style={styles.metaPillText}>{label}</Text>
+    </View>
   );
 }
 
@@ -93,10 +164,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F4EFE8',
   },
-  content: {
+  container: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 28,
+    paddingBottom: 36,
     gap: 18,
   },
   headerRow: {
@@ -109,6 +180,8 @@ const styles = StyleSheet.create({
     height: 42,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF',
   },
   headerTitle: {
     color: '#2F42C7',
@@ -119,7 +192,7 @@ const styles = StyleSheet.create({
     width: 42,
   },
   introCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FBF9F5',
     borderRadius: 26,
     padding: 20,
     gap: 8,
@@ -132,80 +205,151 @@ const styles = StyleSheet.create({
   },
   introTitle: {
     color: '#1B140F',
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: '600',
-    lineHeight: 32,
   },
   introCopy: {
     color: '#6E665F',
     fontSize: 14,
     lineHeight: 22,
   },
-  cardList: {
-    gap: 14,
+  trailList: {
+    gap: 16,
   },
   trailCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 18,
-    gap: 14,
-    shadowColor: '#000000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    borderRadius: 28,
+    backgroundColor: '#FBF9F5',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(47,66,199,0.08)',
   },
-  trailCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  previewFrame: {
+    height: 240,
+    position: 'relative',
+    backgroundColor: '#E8E3DB',
+  },
+  gallerySlide: {
+    width: '100%',
+    height: 240,
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  previewOverlay: {
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'space-between',
-    gap: 12,
+    padding: 16,
+    backgroundColor: 'rgba(19, 20, 35, 0.14)',
   },
-  trailTitle: {
-    color: '#1B140F',
-    fontSize: 20,
-    fontWeight: '600',
+  previewTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  trailArea: {
-    color: '#6E665F',
-    fontSize: 14,
-    marginTop: 4,
-  },
-  difficultyBadge: {
+  previewBadge: {
+    alignSelf: 'flex-start',
     borderRadius: 999,
-    backgroundColor: '#EEF1FF',
+    backgroundColor: 'rgba(255,255,255,0.9)',
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  difficultyText: {
+  previewBadgeText: {
     color: '#2F42C7',
     fontSize: 12,
     fontWeight: '700',
   },
-  trailDescription: {
-    color: '#6E665F',
-    fontSize: 14,
-    lineHeight: 22,
+  previewCountBadge: {
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.24)',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
   },
-  trailMetaRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  metaItem: {
-    flex: 1,
-    borderRadius: 16,
-    backgroundColor: '#F7F4EF',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    gap: 4,
-  },
-  metaValue: {
-    color: '#1B140F',
-    fontSize: 15,
+  previewCountText: {
+    color: '#FFFFFF',
+    fontSize: 12,
     fontWeight: '700',
   },
-  metaLabel: {
-    color: '#8A837C',
+  previewBottomCopy: {
+    gap: 4,
+  },
+  previewArea: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    textShadowColor: 'rgba(0,0,0,0.22)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  previewCaption: {
+    color: 'rgba(255,255,255,0.92)',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  photoDotRow: {
+    position: 'absolute',
+    left: 16,
+    bottom: 16,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  photoDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  photoDotActive: {
+    width: 18,
+    backgroundColor: '#FFFFFF',
+  },
+  trailBody: {
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    gap: 12,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  trailTitle: {
+    flex: 1,
+    color: '#1B140F',
+    fontSize: 22,
+    fontWeight: '600',
+  },
+  inlineOpenButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: '#2F42C7',
+  },
+  inlineOpenButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  trailCopy: {
+    color: '#6E665F',
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  metaPill: {
+    borderRadius: 999,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  metaPillText: {
+    color: '#756C65',
     fontSize: 12,
+    fontWeight: '700',
   },
 });
