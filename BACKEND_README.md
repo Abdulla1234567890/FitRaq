@@ -3,6 +3,7 @@
 This document is a backend-facing reference for the current Fitraq app flow.
 
 It covers:
+
 - the user profile data we collect
 - the onboarding questionnaire data we collect
 - the payload shape recommended for backend storage
@@ -144,7 +145,7 @@ These are the current selectable values in the app.
 
 ### movement
 
-- `Walking`
+- `Walkingg`
 - `Running`
 - `Cycling`
 - `Hiking`
@@ -397,4 +398,3 @@ Current Activity page direction:
 
 - [app/(tabs)/activity.tsx](/Users/abdulla/Developer/New%20Projects/Fitraq/app/%28tabs%29/activity.tsx)
 - [app/(tabs)/activity-week.tsx](/Users/abdulla/Developer/New%20Projects/Fitraq/app/%28tabs%29/activity-week.tsx)
-
