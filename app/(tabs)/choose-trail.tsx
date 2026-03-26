@@ -66,12 +66,25 @@ export default function ChooseTrailScreen() {
           <View style={styles.headerSpacer} />
         </View>
 
-        <View style={styles.introCard}>
-          <Text style={styles.introEyebrow}>{selectedType.label.toUpperCase()}</Text>
-          <Text style={styles.introTitle}>Pick a trail from the photos</Text>
-          <Text style={styles.introCopy}>
-            Swipe inside each trail card to preview the vibe, then open the route you want.
-          </Text>
+        <View style={styles.actionRow}>
+          <View style={styles.modeChip}>
+            <Text style={styles.modeChipText}>{selectedType.label}</Text>
+          </View>
+
+          <Pressable
+            onPress={async () => {
+              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push({
+                pathname: '/(tabs)/start-journey',
+                params: {
+                  type: selectedType.id,
+                },
+              });
+            }}
+            style={styles.quickStartButton}
+          >
+            <Text style={styles.quickStartButtonText}>Start here</Text>
+          </Pressable>
         </View>
 
         <View style={styles.trailList}>
@@ -134,8 +147,6 @@ export default function ChooseTrailScreen() {
                     </Pressable>
                   </View>
 
-                  <Text style={styles.trailCopy}>{trail.description}</Text>
-
                   <View style={styles.metaRow}>
                     <MetaPill label={`${trail.distanceKm.toFixed(1)} km`} />
                     <MetaPill label={trail.estimatedTime} />
@@ -191,27 +202,33 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 42,
   },
-  introCard: {
-    backgroundColor: '#FBF9F5',
-    borderRadius: 26,
-    padding: 20,
-    gap: 8,
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
-  introEyebrow: {
-    color: '#8A837C',
-    fontSize: 12,
+  modeChip: {
+    borderRadius: 999,
+    backgroundColor: '#EEF1FF',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  modeChipText: {
+    color: '#2F42C7',
+    fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 1.1,
   },
-  introTitle: {
-    color: '#1B140F',
-    fontSize: 30,
-    fontWeight: '600',
+  quickStartButton: {
+    borderRadius: 999,
+    backgroundColor: '#2F42C7',
+    paddingHorizontal: 16,
+    paddingVertical: 11,
   },
-  introCopy: {
-    color: '#6E665F',
-    fontSize: 14,
-    lineHeight: 22,
+  quickStartButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
   trailList: {
     gap: 16,
@@ -330,11 +347,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
-  },
-  trailCopy: {
-    color: '#6E665F',
-    fontSize: 14,
-    lineHeight: 21,
   },
   metaRow: {
     flexDirection: 'row',

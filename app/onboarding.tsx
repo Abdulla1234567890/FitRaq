@@ -1,4 +1,6 @@
 import * as Haptics from 'expo-haptics';
+import { submitOnboarding } from '@/lib/backend';
+import { setCurrentOnboardingAnswers, setCurrentUserProfile } from '@/lib/user-session';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -165,6 +167,8 @@ export default function OnboardingScreen() {
     name: '',
     weight: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState('');
 
   const pages = useMemo(() => {
     const goal = answers.goal;
@@ -199,7 +203,45 @@ export default function OnboardingScreen() {
   };
 
   const finishOnboarding = async () => {
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const payload = buildOnboardingPayload(profile, answers);
+
+    try {
+      setIsSubmitting(true);
+      setSubmitMessage('Saving your setup...');
+
+      const response = await submitOnboarding(payload);
+      const returnedUserId = response?.user_id ?? response?.user?.id ?? response?.id ?? null;
+
+      setCurrentUserProfile({
+        userId: returnedUserId,
+        name: payload.user.name,
+        age: payload.user.age,
+        weightKg: payload.user.weight_kg,
+        heightCm: payload.user.height_cm,
+        gender: payload.user.gender,
+      });
+      setCurrentOnboardingAnswers({
+        goal: payload.onboarding.goal ?? undefined,
+        days: payload.onboarding.days ?? undefined,
+        movement: payload.onboarding.movement ?? undefined,
+        level: payload.onboarding.level ?? undefined,
+        challenge: payload.onboarding.challenge ?? undefined,
+        goalBranch: payload.goal_branch,
+      });
+
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setSubmitMessage('');
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Could not save onboarding right now.';
+
+      setSubmitMessage(message);
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      return;
+    } finally {
+      setIsSubmitting(false);
+    }
+
     router.replace({
       pathname: '/(tabs)',
       params: {
@@ -328,6 +370,12 @@ export default function OnboardingScreen() {
           </Pressable>
         </View>
 
+        {submitMessage ? (
+          <View style={styles.submitBanner}>
+            <Text style={styles.submitBannerText}>{submitMessage}</Text>
+          </View>
+        ) : null}
+
         <FlatList
           ref={listRef}
           data={pages}
@@ -391,16 +439,60 @@ export default function OnboardingScreen() {
             </Pressable>
 
             <Pressable
+              disabled={isSubmitting}
               onPress={() => (currentPage === pages.length - 1 ? finishOnboarding() : goToPage(currentPage + 1))}
-              style={styles.navButtonPrimary}
+              style={[styles.navButtonPrimary, isSubmitting ? styles.navButtonPrimaryDisabled : undefined]}
             >
-              <Text style={styles.navButtonPrimaryText}>{currentPage === pages.length - 1 ? 'Finish' : 'Next'}</Text>
+              <Text style={styles.navButtonPrimaryText}>
+                {isSubmitting ? 'Saving...' : currentPage === pages.length - 1 ? 'Finish' : 'Next'}
+              </Text>
             </Pressable>
           </View>
         </View>
       </View>
     </SafeAreaView>
   );
+}
+
+function buildOnboardingPayload(profile: ProfileState, answers: Record<string, string>) {
+  const goalBranchKeys = Object.keys(answers).filter(
+    (key) => !['goal', 'days', 'movement', 'level', 'challenge'].includes(key)
+  );
+
+  return {
+    user: {
+      name: profile.name.trim() || 'Guest',
+      age: parseOptionalNumber(profile.age),
+      weight_kg: parseOptionalNumber(profile.weight),
+      height_cm: parseOptionalNumber(profile.height),
+      gender: profile.gender || null,
+    },
+    onboarding: {
+      goal: answers.goal ?? null,
+      days: answers.days ?? null,
+      movement: answers.movement ?? null,
+      level: answers.level ?? null,
+      challenge: answers.challenge ?? null,
+    },
+    goal_branch: goalBranchKeys.reduce<Record<string, string>>((result, key) => {
+      if (answers[key]) {
+        result[key] = answers[key];
+      }
+
+      return result;
+    }, {}),
+  };
+}
+
+function parseOptionalNumber(value: string) {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 const styles = StyleSheet.create({
@@ -420,6 +512,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 12,
+  },
+  submitBanner: {
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  submitBannerText: {
+    color: '#6A625B',
+    fontSize: 13,
+    lineHeight: 18,
   },
   stepPill: {
     borderRadius: 999,
@@ -591,6 +695,9 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: '#2F42C7',
     paddingVertical: 15,
+  },
+  navButtonPrimaryDisabled: {
+    opacity: 0.72,
   },
   navButtonPrimaryText: {
     color: '#FFFFFF',
