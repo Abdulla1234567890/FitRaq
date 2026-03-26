@@ -17,11 +17,39 @@ type StoredOnboardingAnswers = {
 };
 
 type AppSession = {
+  activityPlan: ActivityPlan | null;
   onboarding: StoredOnboardingAnswers | null;
   profile: StoredUserProfile | null;
 };
 
+export type ActivityPlanDayTask = {
+  is_required?: boolean;
+  label: string;
+  target?: string | null;
+  type: string;
+};
+
+export type ActivityPlanDay = {
+  day: string;
+  tasks: ActivityPlanDayTask[];
+};
+
+export type ActivityPlanWeek = {
+  days: ActivityPlanDay[];
+  focus: string;
+  goal: string;
+  week: number;
+};
+
+export type ActivityPlan = {
+  current_week: number;
+  program_title: string;
+  summary?: string;
+  weeks: ActivityPlanWeek[];
+};
+
 const appSession: AppSession = {
+  activityPlan: null,
   onboarding: null,
   profile: null,
 };
@@ -40,4 +68,12 @@ export function setCurrentOnboardingAnswers(onboarding: StoredOnboardingAnswers)
 
 export function getCurrentOnboardingAnswers() {
   return appSession.onboarding;
+}
+
+export function setCurrentActivityPlan(activityPlan: ActivityPlan | null) {
+  appSession.activityPlan = activityPlan;
+}
+
+export function getCurrentActivityPlan() {
+  return appSession.activityPlan;
 }

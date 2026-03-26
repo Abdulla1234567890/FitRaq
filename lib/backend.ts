@@ -39,8 +39,14 @@ export type JourneyPayload = {
   user_id: string | null;
 };
 
+export type ActivityPlanPayload = OnboardingPayload;
+
 export async function submitOnboarding(payload: OnboardingPayload) {
   return postJson('/onboarding', payload);
+}
+
+export async function generateActivityPlan(payload: ActivityPlanPayload) {
+  return postJson('/generate-activity-plan', payload);
 }
 
 export async function submitJourney(payload: JourneyPayload) {

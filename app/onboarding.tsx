@@ -1,6 +1,6 @@
 import * as Haptics from 'expo-haptics';
-import { submitOnboarding } from '@/lib/backend';
-import { setCurrentOnboardingAnswers, setCurrentUserProfile } from '@/lib/user-session';
+import { generateActivityPlan, submitOnboarding } from '@/lib/backend';
+import { setCurrentActivityPlan, setCurrentOnboardingAnswers, setCurrentUserProfile } from '@/lib/user-session';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -228,6 +228,16 @@ export default function OnboardingScreen() {
         challenge: payload.onboarding.challenge ?? undefined,
         goalBranch: payload.goal_branch,
       });
+
+      setSubmitMessage('Building your plan...');
+
+      try {
+        const planResponse = await generateActivityPlan(payload);
+        const returnedPlan = planResponse?.plan ?? planResponse?.result ?? null;
+        setCurrentActivityPlan(returnedPlan);
+      } catch {
+        setCurrentActivityPlan(null);
+      }
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSubmitMessage('');
