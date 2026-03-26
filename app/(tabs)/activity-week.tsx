@@ -1,19 +1,30 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
+import { useFocusEffect } from '@react-navigation/native';
+import { getCurrentActivityPlan } from '@/lib/user-session';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ACTIVITY_WEEKS } from './activity-program';
+import { resolveActivityWeeks } from './activity-program';
 
 export default function ActivityWeekScreen() {
   const params = useLocalSearchParams<{ weekId?: string }>();
+  const [activityPlan, setActivityPlan] = useState(() => getCurrentActivityPlan());
+
+  useFocusEffect(
+    useCallback(() => {
+      setActivityPlan(getCurrentActivityPlan());
+    }, [])
+  );
+
+  const activityWeeks = useMemo(() => resolveActivityWeeks(activityPlan), [activityPlan]);
   const initialWeekId = useMemo(() => {
-    return ACTIVITY_WEEKS.find((item) => item.id === params.weekId)?.id ?? ACTIVITY_WEEKS[0].id;
-  }, [params.weekId]);
+    return activityWeeks.find((item) => item.id === params.weekId)?.id ?? activityWeeks[0].id;
+  }, [activityWeeks, params.weekId]);
   const [selectedWeekId, setSelectedWeekId] = useState(initialWeekId);
-  const week = ACTIVITY_WEEKS.find((item) => item.id === selectedWeekId) ?? ACTIVITY_WEEKS[0];
+  const week = activityWeeks.find((item) => item.id === selectedWeekId) ?? activityWeeks[0];
   const progressValue = week.status === 'completed' ? 100 : week.status === 'current' ? 55 : 0;
 
   return (
@@ -36,7 +47,7 @@ export default function ActivityWeekScreen() {
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.weekTabs}>
-          {ACTIVITY_WEEKS.map((item) => {
+          {activityWeeks.map((item) => {
             const isActive = item.id === week.id;
 
             return (

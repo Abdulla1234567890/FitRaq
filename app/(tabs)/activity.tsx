@@ -1,29 +1,27 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
+import { useFocusEffect } from '@react-navigation/native';
+import { getCurrentActivityPlan } from '@/lib/user-session';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const TODAY_TASKS = [
-  { id: 'steps', label: '8,000 steps', progress: '6.3k / 8k', done: false, icon: 'directions-walk' },
-  { id: 'journey', label: '20 min walk or run', progress: 'Pending', done: false, icon: 'directions-run' },
-  { id: 'meals', label: 'Log all meals', progress: '2 / 3', done: false, icon: 'restaurant' },
-  { id: 'water', label: '2.5L water', progress: 'Done', done: true, icon: 'water-drop' },
-];
-
-const WEEK_DAYS = [
-  { day: 'M', score: 1, active: false },
-  { day: 'T', score: 1, active: false },
-  { day: 'W', score: 0.7, active: true },
-  { day: 'T', score: 0.2, active: false },
-  { day: 'F', score: 0, active: false },
-  { day: 'S', score: 0, active: false },
-  { day: 'S', score: 0, active: false },
-];
+import { resolveActivityWeeks, resolveTodayTasks, resolveWeekBars } from './activity-program';
 
 export default function ActivityScreen() {
   const insets = useSafeAreaInsets();
+  const [activityPlan, setActivityPlan] = useState(() => getCurrentActivityPlan());
+
+  useFocusEffect(
+    useCallback(() => {
+      setActivityPlan(getCurrentActivityPlan());
+    }, [])
+  );
+
+  const todayTasks = useMemo(() => resolveTodayTasks(activityPlan), [activityPlan]);
+  const weekDays = useMemo(() => resolveWeekBars(activityPlan), [activityPlan]);
+  const resolvedWeeks = useMemo(() => resolveActivityWeeks(activityPlan), [activityPlan]);
+  const currentWeek = resolvedWeeks.find((week) => week.status === 'current') ?? resolvedWeeks[0];
   const today = useMemo(() => startOfDay(new Date()), []);
   const [selectedDate, setSelectedDate] = useState(today);
   const [displayedMonth, setDisplayedMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -42,8 +40,8 @@ export default function ActivityScreen() {
       }).format(displayedMonth),
     [displayedMonth]
   );
-  const completedToday = TODAY_TASKS.filter((task) => task.done).length;
-  const completionRatio = completedToday / TODAY_TASKS.length;
+  const completedToday = todayTasks.filter((task) => task.done).length;
+  const completionRatio = todayTasks.length ? completedToday / todayTasks.length : 0;
 
   return (
     <SafeAreaView edges={['left', 'right']} style={styles.safeArea}>
@@ -55,11 +53,11 @@ export default function ActivityScreen() {
             <View>
               <Text style={styles.eyebrow}>DAILY TRACKER</Text>
               <Text style={styles.title}>{selectedDay?.isToday ? 'Today' : `${selectedDay?.day} ${selectedDay?.dateNumber}`}</Text>
-              <Text style={styles.calendarHeroSubtext}>Week 2 in progress</Text>
+              <Text style={styles.calendarHeroSubtext}>{currentWeek.title} in progress</Text>
             </View>
 
             <View style={styles.headerBadge}>
-              <Text style={styles.headerBadgeText}>{completedToday}/{TODAY_TASKS.length}</Text>
+              <Text style={styles.headerBadgeText}>{completedToday}/{todayTasks.length || 0}</Text>
             </View>
           </View>
 
@@ -131,7 +129,7 @@ export default function ActivityScreen() {
           <View style={styles.heroTopRow}>
             <View>
               <Text style={styles.heroLabel}>Current week</Text>
-              <Text style={styles.heroTitle}>Week 2</Text>
+              <Text style={styles.heroTitle}>{currentWeek.title}</Text>
             </View>
 
             <View style={styles.ringWrap}>
@@ -143,7 +141,7 @@ export default function ActivityScreen() {
             </View>
           </View>
 
-          <Text style={styles.heroFocus}>Tighten the routine</Text>
+          <Text style={styles.heroFocus}>{currentWeek.focus}</Text>
 
           <View style={styles.heroProgressTrack}>
             <View style={[styles.heroProgressFill, { width: `${Math.max(completionRatio * 100, 8)}%` }]} />
@@ -156,7 +154,7 @@ export default function ActivityScreen() {
         </View>
 
         <View style={styles.taskList}>
-          {TODAY_TASKS.map((task) => (
+          {todayTasks.map((task) => (
             <Pressable
               key={task.id}
               onPress={async () => {
@@ -190,12 +188,12 @@ export default function ActivityScreen() {
           <View style={styles.sectionRow}>
             <Text style={styles.sectionTitle}>This week</Text>
             <View style={styles.weekPill}>
-              <Text style={styles.weekPillText}>Week 2</Text>
+              <Text style={styles.weekPillText}>{currentWeek.title}</Text>
             </View>
           </View>
 
           <View style={styles.weekStrip}>
-            {WEEK_DAYS.map((item, index) => (
+            {weekDays.map((item, index) => (
               <View key={`${item.day}-${index}`} style={styles.dayColumn}>
                 <View style={[styles.dayBarTrack, item.active ? styles.dayBarTrackActive : undefined]}>
                   <View
@@ -212,9 +210,9 @@ export default function ActivityScreen() {
           </View>
 
           <View style={styles.weekStatsRow}>
-            <WeekStat label="Days done" value="2/7" />
-            <WeekStat label="Streak" value="3 days" />
-            <WeekStat label="Week score" value="71%" />
+            <WeekStat label="Days done" value={`${completedToday}/${todayTasks.length || 0}`} />
+            <WeekStat label="Current" value={currentWeek.title} />
+            <WeekStat label="Plan" value={resolvedWeeks.length ? `${resolvedWeeks.length} weeks` : 'Static'} />
           </View>
 
           <Pressable
@@ -222,7 +220,7 @@ export default function ActivityScreen() {
               await Haptics.selectionAsync();
               router.push({
                 pathname: '/(tabs)/activity-week',
-                params: { weekId: 'week-2' },
+                params: { weekId: currentWeek.id },
               });
             }}
             style={styles.weekOverviewButton}
