@@ -46,14 +46,11 @@ export default function ActivityScreen() {
   return (
     <SafeAreaView edges={['left', 'right']} style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={[styles.calendarHero, { paddingTop: insets.top + 14 }]}>
-          <View style={styles.calendarHeroGlow} />
-
-          <View style={styles.calendarHeroTop}>
+        <View style={styles.calendarSection}>
+          <View style={[styles.activityHeader, { paddingTop: insets.top + 12 }]}>
             <View>
               <Text style={styles.eyebrow}>DAILY TRACKER</Text>
               <Text style={styles.title}>{selectedDay?.isToday ? 'Today' : `${selectedDay?.day} ${selectedDay?.dateNumber}`}</Text>
-              <Text style={styles.calendarHeroSubtext}>{currentWeek.title} in progress</Text>
             </View>
 
             <View style={styles.headerBadge}>
@@ -75,8 +72,6 @@ export default function ActivityScreen() {
                 <MaterialIcons color="#2F42C7" name="calendar-month" size={18} />
               </Pressable>
             </View>
-
-            <View style={styles.calendarDivider} />
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.calendarRow}>
               {visibleDays.map((day) => {
@@ -382,6 +377,9 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     gap: 16,
   },
+  calendarSection: {
+    paddingHorizontal: 20,
+  },
   eyebrow: {
     color: '#6B5F58',
     fontSize: 12,
@@ -394,43 +392,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 4,
   },
-  calendarHero: {
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    backgroundColor: '#F4EFE8',
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    overflow: 'hidden',
-    gap: 14,
-    position: 'relative',
-  },
-  calendarHeroGlow: {
-    position: 'absolute',
-    left: -40,
-    right: -40,
-    bottom: -30,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: 'rgba(238, 241, 255, 0.9)',
-  },
-  calendarHeroTop: {
+  activityHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
   },
-  calendarHeroSubtext: {
-    color: '#6B5F58',
-    fontSize: 13,
-    marginTop: 4,
-  },
   headerBadge: {
     minWidth: 56,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.75)',
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 14,
-    paddingVertical: 10,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   headerBadgeText: {
     color: '#2F42C7',
@@ -438,9 +413,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   calendarCard: {
-    paddingTop: 2,
-    paddingBottom: 2,
-    paddingHorizontal: 2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
     gap: 12,
   },
   calendarHeaderInline: {
@@ -448,42 +424,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-    paddingHorizontal: 4,
+    paddingHorizontal: 6,
   },
   calendarMonthHero: {
     color: '#1B140F',
-    fontSize: 22,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '600',
     flex: 1,
-    textAlign: 'center',
   },
   calendarOpenButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.56)',
-  },
-  calendarDivider: {
-    height: 1,
-    backgroundColor: 'rgba(47, 66, 199, 0.08)',
-    marginHorizontal: 2,
+    backgroundColor: '#F4EFE8',
   },
   calendarRow: {
-    gap: 18,
-    paddingHorizontal: 6,
-    paddingTop: 2,
+    gap: 12,
   },
   dayItem: {
-    width: 42,
+    width: 44,
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   calendarWeekday: {
     color: '#1B140F',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
   },
   calendarWeekdayActive: {
     color: '#2F42C7',
@@ -492,9 +460,9 @@ const styles = StyleSheet.create({
     color: '#2F42C7',
   },
   calendarDateCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -511,8 +479,8 @@ const styles = StyleSheet.create({
   },
   calendarDateText: {
     color: '#1B140F',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '500',
   },
   calendarDateTextToday: {
     color: '#2F42C7',

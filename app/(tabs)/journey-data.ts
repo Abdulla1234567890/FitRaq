@@ -91,7 +91,7 @@ export const TRAILS: Trail[] = [
     difficulty: 'Moderate',
     description: 'Fast city loop with long straights and smooth pace segments.',
     gallery: [
-      { image: require('@/assets/images/Running.png'), caption: 'Skyline start' },
+      { image: require('@/assets/images/Downtown_Dubai.jpg'), caption: 'Skyline start' },
       { image: require('@/assets/images/Running.png'), caption: 'Straight pace segment' },
       { image: require('@/assets/images/Running.png'), caption: 'Finish beside the boulevard' },
     ],
@@ -113,7 +113,7 @@ export const TRAILS: Trail[] = [
     difficulty: 'Moderate',
     description: 'Waterfront route suited for tempo efforts and progression runs.',
     gallery: [
-      { image: require('@/assets/images/Running.png'), caption: 'Canal warm-up stretch' },
+      { image: require('@/assets/images/Creek.jpg'), caption: 'Canal warm-up stretch' },
       { image: require('@/assets/images/Running.png'), caption: 'Tempo-ready waterfront lane' },
       { image: require('@/assets/images/Running.png'), caption: 'Night lights on the cool-down' },
     ],

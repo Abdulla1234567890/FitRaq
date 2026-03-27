@@ -260,6 +260,36 @@ export default function OnboardingScreen() {
     });
   };
 
+  const bypassBackendAndContinue = async () => {
+    const payload = buildOnboardingPayload(profile, answers);
+
+    setCurrentUserProfile({
+      userId: null,
+      name: payload.user.name,
+      age: payload.user.age,
+      weightKg: payload.user.weight_kg,
+      heightCm: payload.user.height_cm,
+      gender: payload.user.gender,
+    });
+    setCurrentOnboardingAnswers({
+      goal: payload.onboarding.goal ?? undefined,
+      days: payload.onboarding.days ?? undefined,
+      movement: payload.onboarding.movement ?? undefined,
+      level: payload.onboarding.level ?? undefined,
+      challenge: payload.onboarding.challenge ?? undefined,
+      goalBranch: payload.goal_branch,
+    });
+    setSubmitMessage('Backend bypassed. Using local app state for now.');
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+
+    router.replace({
+      pathname: '/(tabs)',
+      params: {
+        name: profile.name || 'Janna',
+      },
+    });
+  };
+
   const handleSelect = async (pageId: string, option: string) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setAnswers((current) => ({ ...current, [pageId]: option }));
@@ -458,6 +488,12 @@ export default function OnboardingScreen() {
               </Text>
             </Pressable>
           </View>
+
+          {currentPage === pages.length - 1 ? (
+            <Pressable onPress={bypassBackendAndContinue} style={styles.bypassButton}>
+              <Text style={styles.bypassButtonText}>Continue without backend</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
     </SafeAreaView>
@@ -673,7 +709,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: 'center',
-    gap: 20,
+    gap: 16,
   },
   dotRow: {
     flexDirection: 'row',
@@ -731,5 +767,14 @@ const styles = StyleSheet.create({
   },
   navButtonSecondaryTextDisabled: {
     color: '#B4ADA6',
+  },
+  bypassButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  bypassButtonText: {
+    color: '#7A726B',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

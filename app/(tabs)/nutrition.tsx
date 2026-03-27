@@ -2,7 +2,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { API_BASE_URL } from '@/constants/api';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -128,6 +128,8 @@ export default function NutritionScreen() {
   const [submitState, setSubmitState] = useState('Meals ready to send to the calorie model.');
   const [analysis, setAnalysis] = useState<NutritionAnalysis | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [calendarVisible, setCalendarVisible] = useState(false);
+  const monthLabel = 'March 2026';
 
   const selectedDay = days.find((day) => day.id === selectedDayId) ?? days[0];
   const hasMealContent = useMemo(
@@ -258,55 +260,64 @@ export default function NutritionScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={styles.eyebrow}>NUTRITION</Text>
-            <Text style={styles.title}>Daily Fuel</Text>
+        <View style={styles.topSection}>
+          <View style={styles.headerRow}>
+            <View style={styles.headerTextBlock}>
+              <Text style={styles.eyebrow}>NUTRITION</Text>
+              <Text style={styles.title}>Daily Fuel</Text>
+              <Text style={styles.headerCopy}>Track meals and keep an eye on your daily intake.</Text>
+            </View>
+
+            <Pressable
+              onPress={async () => {
+                await Haptics.selectionAsync();
+                setCalendarVisible(true);
+              }}
+              style={styles.headerIcon}
+            >
+              <MaterialIcons color="#2F42C7" name="calendar-month" size={24} />
+            </Pressable>
           </View>
 
-          <View style={styles.headerIcon}>
-            <MaterialIcons color="#2F42C7" name="calendar-month" size={24} />
+          <View style={styles.calendarCard}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.calendarRow}>
+              {days.map((day) => {
+                const isActive = day.id === selectedDayId;
+
+                return (
+                  <Pressable
+                    key={day.id}
+                    onPress={async () => {
+                      await Haptics.selectionAsync();
+                      setSelectedDayId(day.id);
+                    }}
+                    style={styles.dayItem}
+                  >
+                    <Text style={styles.weekday}>{day.weekday}</Text>
+                    <View style={[styles.dateCircle, isActive ? styles.dateCircleActive : undefined]}>
+                      <Text style={[styles.dateNumber, isActive ? styles.dateNumberActive : undefined]}>
+                        {day.dateNumber}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
           </View>
-        </View>
 
-        <View style={styles.calendarCard}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.calendarRow}>
-            {days.map((day) => {
-              const isActive = day.id === selectedDayId;
-
-              return (
-                <Pressable
-                  key={day.id}
-                  onPress={async () => {
-                    await Haptics.selectionAsync();
-                    setSelectedDayId(day.id);
-                  }}
-                  style={styles.dayItem}
-                >
-                  <Text style={styles.weekday}>{day.weekday}</Text>
-                  <View style={[styles.dateCircle, isActive ? styles.dateCircleActive : undefined]}>
-                    <Text style={[styles.dateNumber, isActive ? styles.dateNumberActive : undefined]}>
-                      {day.dateNumber}
-                    </Text>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        <View style={styles.calorieCompactCard}>
-          <View>
-            <Text style={styles.calorieCompactLabel}>
-              {selectedDay.weekday} {selectedDay.dateNumber}
-            </Text>
-            <Text style={styles.calorieCompactValue}>
-              {selectedDay.calories > 0 ? `${selectedDay.calories} cal` : 'No calories yet'}
-            </Text>
-          </View>
-          <View style={styles.calorieBadge}>
-            <MaterialIcons color="#2F42C7" name="local-fire-department" size={18} />
-            <Text style={styles.calorieBadgeText}>Daily total</Text>
+          <View style={styles.calorieCompactCard}>
+            <View>
+              <Text style={styles.calorieCompactLabel}>
+                {selectedDay.weekday} {selectedDay.dateNumber}
+              </Text>
+              <Text style={styles.calorieCompactValue}>
+                {selectedDay.calories > 0 ? `${selectedDay.calories} cal` : 'No calories yet'}
+              </Text>
+            </View>
+            <View style={styles.calorieBadge}>
+              <MaterialIcons color="#2F42C7" name="local-fire-department" size={18} />
+              <Text style={styles.calorieBadgeText}>Daily total</Text>
+            </View>
           </View>
         </View>
 
@@ -404,6 +415,62 @@ export default function NutritionScreen() {
           </View>
         ) : null}
       </ScrollView>
+
+      <Modal animationType="fade" onRequestClose={() => setCalendarVisible(false)} transparent visible={calendarVisible}>
+        <View style={styles.modalBackdrop}>
+          <Pressable style={styles.modalDismissLayer} onPress={() => setCalendarVisible(false)} />
+
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Pick a date</Text>
+              <Pressable
+                onPress={async () => {
+                  await Haptics.selectionAsync();
+                  setCalendarVisible(false);
+                }}
+                style={styles.modalCloseButton}
+              >
+                <MaterialIcons color="#2F42C7" name="close" size={20} />
+              </Pressable>
+            </View>
+
+            <Text style={styles.modalMonthLabel}>{monthLabel}</Text>
+
+            <View style={styles.monthWeekHeader}>
+              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
+                <Text key={`${day}-${index}`} style={styles.monthWeekHeaderText}>
+                  {day}
+                </Text>
+              ))}
+            </View>
+
+            <View style={styles.monthGrid}>
+              {days.map((day) => {
+                const isActive = day.id === selectedDayId;
+
+                return (
+                  <Pressable
+                    key={day.id}
+                    onPress={async () => {
+                      await Haptics.selectionAsync();
+                      setSelectedDayId(day.id);
+                      setCalendarVisible(false);
+                    }}
+                    style={[styles.monthDayCell, isActive ? styles.monthDayCellActive : undefined]}
+                  >
+                    <Text style={[styles.monthDayText, isActive ? styles.monthDayTextActive : undefined]}>
+                      {day.dateNumber}
+                    </Text>
+                    <Text style={[styles.monthDaySubtext, isActive ? styles.monthDaySubtextActive : undefined]}>
+                      {day.weekday}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -453,10 +520,18 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
     gap: 16,
   },
+  topSection: {
+    gap: 14,
+    marginBottom: 4,
+  },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
+    gap: 16,
+  },
+  headerTextBlock: {
+    flex: 1,
   },
   eyebrow: {
     color: '#8F867F',
@@ -470,6 +545,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 4,
   },
+  headerCopy: {
+    color: '#7E766F',
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 8,
+    maxWidth: 240,
+  },
   headerIcon: {
     width: 44,
     height: 44,
@@ -478,11 +560,98 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 18, 38, 0.28)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  modalDismissLayer: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    padding: 20,
+    gap: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modalTitle: {
+    color: '#1B140F',
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  modalCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F4EFE8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalMonthLabel: {
+    color: '#2F42C7',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  monthWeekHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  monthWeekHeaderText: {
+    width: 36,
+    textAlign: 'center',
+    color: '#8F867F',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  monthGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  monthDayCell: {
+    width: 46,
+    borderRadius: 16,
+    backgroundColor: '#F7F4EF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    gap: 4,
+  },
+  monthDayCellActive: {
+    backgroundColor: '#2F42C7',
+  },
+  monthDayText: {
+    color: '#1B140F',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  monthDayTextActive: {
+    color: '#FFFFFF',
+  },
+  monthDaySubtext: {
+    color: '#8F867F',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  monthDaySubtextActive: {
+    color: '#DCE1FF',
+  },
   calendarCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     paddingVertical: 14,
     paddingHorizontal: 10,
+    shadowColor: '#000000',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
   },
   calendarRow: {
     gap: 12,
@@ -528,6 +697,11 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     paddingHorizontal: 16,
     paddingVertical: 14,
+    shadowColor: '#000000',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 1,
   },
   calorieCompactLabel: {
     color: '#7E766F',
