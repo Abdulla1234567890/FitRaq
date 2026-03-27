@@ -1,7 +1,6 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
-import { router } from "expo-router";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -20,11 +19,6 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleContinue = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.replace("/welcome");
-  };
-
   const togglePassword = async () => {
     await Haptics.selectionAsync();
     setShowPassword((value) => !value);
@@ -41,7 +35,7 @@ export default function Login() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.screenCard}>
-            <View style={styles.illustrationWrap}>
+            <View style={styles.brandSection}>
               <Image
                 contentFit="contain"
                 source={require("@/assets/images/FITRAQ2.png")}
@@ -49,73 +43,67 @@ export default function Login() {
               />
             </View>
 
-            <View style={styles.form}>
-              <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Username</Text>
-                <View style={styles.inputShell}>
-                  <MaterialCommunityIcons
-                    color="#FFFFFF"
-                    name="account-circle-outline"
-                    size={20}
-                  />
-                  <TextInput
-                    autoCapitalize="none"
-                    onChangeText={setUsername}
-                    placeholder="Enter Username"
-                    placeholderTextColor="#C9D1FF"
-                    style={styles.input}
-                    value={username}
-                  />
-                </View>
-              </View>
-
-              <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Password</Text>
-                <View style={styles.inputShell}>
-                  <MaterialCommunityIcons
-                    color="#FFFFFF"
-                    name="shield-lock-outline"
-                    size={20}
-                  />
-                  <TextInput
-                    autoCapitalize="none"
-                    onChangeText={setPassword}
-                    placeholder="Enter Password"
-                    placeholderTextColor="#C9D1FF"
-                    secureTextEntry={!showPassword}
-                    style={styles.input}
-                    value={password}
-                  />
-                  <Pressable
-                    onPress={togglePassword}
-                    style={styles.trailingAction}
-                  >
+            <View style={styles.formWrap}>
+              <View style={styles.form}>
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.label}>Username</Text>
+                  <View style={styles.inputShell}>
                     <MaterialCommunityIcons
-                      color="#FFFFFF"
-                      name={showPassword ? "eye-off-outline" : "eye-outline"}
-                      size={18}
+                      color="#2F42C7"
+                      name="account-circle-outline"
+                      size={20}
                     />
+                    <TextInput
+                      autoCapitalize="none"
+                      onChangeText={setUsername}
+                      placeholder="Enter Username"
+                      placeholderTextColor="#9B948B"
+                      style={styles.input}
+                      value={username}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.label}>Password</Text>
+                  <View style={styles.inputShell}>
+                    <MaterialCommunityIcons
+                      color="#2F42C7"
+                      name="shield-lock-outline"
+                      size={20}
+                    />
+                    <TextInput
+                      autoCapitalize="none"
+                      onChangeText={setPassword}
+                      placeholder="Enter Password"
+                      placeholderTextColor="#9B948B"
+                      secureTextEntry={!showPassword}
+                      style={styles.input}
+                      value={password}
+                    />
+                    <Pressable
+                      onPress={togglePassword}
+                      style={styles.trailingAction}
+                    >
+                      <MaterialCommunityIcons
+                        color="#2F42C7"
+                        name={showPassword ? "eye-off-outline" : "eye-outline"}
+                        size={18}
+                      />
+                    </Pressable>
+                  </View>
+                </View>
+
+                <View style={styles.registerRow}>
+                  <Text style={styles.registerCopy}>Not a Member?</Text>
+                  <Pressable>
+                    <Text style={styles.registerLink}>Register</Text>
                   </Pressable>
                 </View>
-              </View>
 
-              <View style={styles.registerRow}>
-                <Text style={styles.registerCopy}>Not a Member?</Text>
-                <Pressable>
-                  <Text style={styles.registerLink}>Register</Text>
-                </Pressable>
-              </View>
-
-              <Pressable onPress={handleContinue} style={styles.ctaButton}>
-                <MaterialCommunityIcons
-                  color="#2F42C7"
-                  name="arrow-right"
-                  size={30}
-                />
-              </Pressable>
-
-              <View style={styles.progressTrack}>
-                <View style={styles.progressFill} />
+                <View style={styles.progressTrack}>
+                  <View style={styles.progressFill} />
+                </View>
               </View>
             </View>
           </View>
@@ -135,31 +123,36 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 22,
     paddingVertical: 28,
   },
   screenCard: {
+    flex: 1,
     backgroundColor: "#F4EFE8",
     borderRadius: 32,
-    paddingHorizontal: 20,
-    paddingVertical: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
   },
-  illustrationWrap: {
-    height: 250,
-    marginBottom: 24,
+  brandSection: {
+    paddingTop: 8,
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
   },
   illustrationImage: {
-    width: 320,
-    height: 220,
+    width: 270,
+    height: 150,
+  },
+  formWrap: {
+    flex: 1,
+    justifyContent: "flex-start",
+    paddingTop: 58,
   },
   form: {
-    gap: 18,
+    gap: 30,
   },
   fieldGroup: {
-    gap: 10,
+    gap: 14,
   },
   label: {
     color: "#1F160F",
@@ -168,22 +161,19 @@ const styles = StyleSheet.create({
   },
   inputShell: {
     minHeight: 54,
-    borderRadius: 999,
-    backgroundColor: "#2F42C7",
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    shadowColor: "#2F42C7",
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: "rgba(127, 142, 87, 0.16)",
   },
   input: {
     flex: 1,
-    color: "#FFFFFF",
-    fontSize: 14,
+    color: "#1F160F",
+    fontSize: 15,
     paddingVertical: 14,
   },
   trailingAction: {
@@ -194,6 +184,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    marginTop: 10,
   },
   registerCopy: {
     color: "#1F160F",
@@ -205,28 +196,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textDecorationLine: "underline",
   },
-  ctaButton: {
-    width: 68,
-    height: 68,
-    alignSelf: "center",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 34,
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000000",
-    shadowOpacity: 0.16,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-    marginTop: 6,
-  },
   progressTrack: {
     width: "100%",
     height: 10,
     borderRadius: 999,
-    backgroundColor: "#D8D8D8",
+    backgroundColor: "#E4DFD5",
     overflow: "hidden",
-    marginTop: 8,
+    marginTop: 18,
   },
   progressFill: {
     width: "82%",

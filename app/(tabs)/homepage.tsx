@@ -2,11 +2,10 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { TRAILS, type Coordinate } from './journey-data';
+import { TRAILS } from './journey-data';
 
 export default function HomePageScreen() {
   const latestTrail = TRAILS[0];
@@ -26,13 +25,6 @@ export default function HomePageScreen() {
     []
   );
 
-  const mapRegion = useMemo(() => createRegionFromRoute(latestTrail.route), [latestTrail.route]);
-
-  const handleStartJourney = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push('/(tabs)/choose-path');
-  };
-
   const handleOpenMenu = async () => {
     await Haptics.selectionAsync();
   };
@@ -40,6 +32,16 @@ export default function HomePageScreen() {
   const handleProfile = async () => {
     await Haptics.selectionAsync();
     router.push('/(tabs)/profile');
+  };
+
+  const handleOpenJourneys = async () => {
+    await Haptics.selectionAsync();
+    router.push('/(tabs)/journeys');
+  };
+
+  const handleOpenActivity = async () => {
+    await Haptics.selectionAsync();
+    router.push('/(tabs)/activity');
   };
 
   return (
@@ -119,62 +121,70 @@ export default function HomePageScreen() {
           </View>
         </View>
 
-        <View style={styles.mapCard}>
-          {Platform.OS === 'web' ? (
-            <View style={styles.webFallback}>
-              <MaterialIcons color="#2F42C7" name="map" size={42} />
-              <Text style={styles.webFallbackText}>Map preview is available on iOS and Android.</Text>
+        <View style={styles.summaryGrid}>
+          <View style={styles.summaryCardPrimary}>
+            <View style={styles.summaryCardTop}>
+              <Text style={styles.summaryEyebrow}>Latest route</Text>
+              <View style={styles.summaryBadge}>
+                <MaterialIcons color="#FFFFFF" name="alt-route" size={14} />
+                <Text style={styles.summaryBadgeText}>Logbook</Text>
+              </View>
             </View>
-          ) : (
-            <MapView
-              initialRegion={mapRegion}
-              pointerEvents="none"
-              rotateEnabled={false}
-              scrollEnabled={false}
-              showsCompass={false}
-              showsPointsOfInterest={false}
-              showsScale={false}
-              style={styles.map}
-              zoomEnabled={false}
-            >
-              <Polyline coordinates={latestTrail.route} strokeColor="#2F42C7" strokeWidth={5} />
-              <Marker coordinate={latestTrail.route[0]}>
-                <View style={styles.routeDotStart} />
-              </Marker>
-              <Marker coordinate={latestTrail.route[latestTrail.route.length - 1]}>
-                <View style={styles.routeDotEnd} />
-              </Marker>
-            </MapView>
-          )}
 
-          <View style={styles.mapOverlay}>
-            <Text style={styles.mapMetaLabel}>{latestTrail.area}</Text>
-            <Text style={styles.mapMetaTitle}>{latestTrail.title}</Text>
+            <Text style={styles.summaryTitle}>{latestTrail.title}</Text>
+            <Text style={styles.summarySubtitle}>{latestTrail.area}</Text>
+
+            <View style={styles.summaryMetricRow}>
+              <View style={styles.summaryMetric}>
+                <Text style={styles.summaryMetricValue}>{latestTrail.distanceKm.toFixed(1)} km</Text>
+                <Text style={styles.summaryMetricLabel}>Distance</Text>
+              </View>
+              <View style={styles.summaryMetric}>
+                <Text style={styles.summaryMetricValue}>{latestTrail.durationMinutes} min</Text>
+                <Text style={styles.summaryMetricLabel}>Time</Text>
+              </View>
+            </View>
           </View>
 
-          <Pressable onPress={handleStartJourney} style={styles.startButton}>
-            <Text style={styles.startButtonText}>Start Journey!</Text>
-          </Pressable>
+          <View style={styles.summaryCardSoft}>
+            <Text style={styles.summaryEyebrowSoft}>Today</Text>
+            <Text style={styles.summaryBigValue}>3 / 5</Text>
+            <Text style={styles.summarySoftLabel}>tasks done</Text>
+
+            <View style={styles.summaryMiniTrack}>
+              <View style={styles.summaryMiniFill} />
+            </View>
+
+            <View style={styles.summaryPill}>
+              <MaterialIcons color="#2F42C7" name="local-fire-department" size={14} />
+              <Text style={styles.summaryPillText}>1,640 kcal logged</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.quickActionsCard}>
+          <View style={styles.quickActionsHeader}>
+            <View style={styles.quickActionLead}>
+              <Text style={styles.quickActionsTitle}>Quick Overview</Text>
+              <Text style={styles.quickActionsSubtitle}>Use the center tab to jump straight into a journey.</Text>
+            </View>
+          </View>
+
+          <View style={styles.quickActionRow}>
+            <Pressable onPress={handleOpenJourneys} style={styles.quickActionButton}>
+              <MaterialIcons color="#2F42C7" name="map" size={18} />
+              <Text style={styles.quickActionButtonText}>Open Logbook</Text>
+            </Pressable>
+
+            <Pressable onPress={handleOpenActivity} style={styles.quickActionButton}>
+              <MaterialIcons color="#2F42C7" name="checklist" size={18} />
+              <Text style={styles.quickActionButtonText}>View Plan</Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
-}
-
-function createRegionFromRoute(route: Coordinate[]) {
-  const latitudes = route.map((point) => point.latitude);
-  const longitudes = route.map((point) => point.longitude);
-  const minLat = Math.min(...latitudes);
-  const maxLat = Math.max(...latitudes);
-  const minLng = Math.min(...longitudes);
-  const maxLng = Math.max(...longitudes);
-
-  return {
-    latitude: (minLat + maxLat) / 2,
-    longitude: (minLng + maxLng) / 2,
-    latitudeDelta: Math.max((maxLat - minLat) * 1.9, 0.02),
-    longitudeDelta: Math.max((maxLng - minLng) * 1.9, 0.02),
-  };
 }
 
 const styles = StyleSheet.create({
@@ -385,87 +395,187 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 0.6,
   },
-  mapCard: {
-    height: 430,
-    borderRadius: 32,
-    backgroundColor: '#E6E0D7',
-    overflow: 'hidden',
-    position: 'relative',
-    shadowColor: '#000000',
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
+  summaryGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  summaryCardPrimary: {
+    flex: 1.2,
+    borderRadius: 28,
+    backgroundColor: '#2F42C7',
+    padding: 18,
+    gap: 16,
+    shadowColor: '#2F42C7',
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
     shadowOffset: { width: 0, height: 8 },
     elevation: 4,
   },
-  map: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  webFallback: {
+  summaryCardTop: {
+    flexDirection: 'row',
     flex: 1,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  summaryEyebrow: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  summaryBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    paddingHorizontal: 28,
+    gap: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
-  webFallbackText: {
-    color: '#2F42C7',
+  summaryBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  summaryTitle: {
+    color: '#FFFFFF',
+    fontSize: 24,
+    lineHeight: 28,
+    fontWeight: '700',
+  },
+  summarySubtitle: {
+    color: 'rgba(255,255,255,0.76)',
     fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
+    marginTop: -8,
   },
-  mapOverlay: {
-    position: 'absolute',
-    top: 18,
-    left: 18,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.88)',
-    paddingHorizontal: 14,
+  summaryMetricRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  summaryMetric: {
+    flex: 1,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 12,
     paddingVertical: 12,
     gap: 4,
   },
-  mapMetaLabel: {
-    color: '#756C65',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  mapMetaTitle: {
-    color: '#1B140F',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  routeDotStart: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 4,
-    borderColor: '#2F42C7',
-  },
-  routeDotEnd: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#2F42C7',
-    borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.8)',
-  },
-  startButton: {
-    position: 'absolute',
-    bottom: 16,
-    alignSelf: 'center',
-    backgroundColor: '#2F42C7',
-    paddingHorizontal: 28,
-    paddingVertical: 16,
-    borderRadius: 999,
-    shadowColor: '#2F42C7',
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-  },
-  startButtonText: {
+  summaryMetricValue: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: '500',
+    fontWeight: '700',
+  },
+  summaryMetricLabel: {
+    color: 'rgba(255,255,255,0.68)',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  summaryCardSoft: {
+    flex: 0.9,
+    borderRadius: 28,
+    backgroundColor: '#FBF9F5',
+    padding: 18,
+    gap: 12,
+    shadowColor: '#000000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  summaryEyebrowSoft: {
+    color: '#756C65',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  summaryBigValue: {
+    color: '#1B140F',
+    fontSize: 34,
+    lineHeight: 36,
+    fontWeight: '700',
+  },
+  summarySoftLabel: {
+    color: '#756C65',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: -4,
+  },
+  summaryMiniTrack: {
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: '#ECE7DD',
+    overflow: 'hidden',
+  },
+  summaryMiniFill: {
+    width: '60%',
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: '#2F42C7',
+  },
+  summaryPill: {
+    marginTop: 'auto',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    backgroundColor: '#EEF1FF',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  summaryPillText: {
+    color: '#2F42C7',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  quickActionsCard: {
+    borderRadius: 28,
+    backgroundColor: '#FBF9F5',
+    padding: 18,
+    gap: 16,
+    shadowColor: '#000000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  quickActionsHeader: {
+    gap: 4,
+  },
+  quickActionLead: {
+    flex: 1,
+    gap: 4,
+  },
+  quickActionsTitle: {
+    color: '#1B140F',
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  quickActionsSubtitle: {
+    color: '#756C65',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  quickActionRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  quickActionButton: {
+    flex: 1,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  quickActionButtonText: {
+    color: '#2F42C7',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

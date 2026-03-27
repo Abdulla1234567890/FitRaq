@@ -2,11 +2,13 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Tabs } from "expo-router";
 import React from "react";
 
+import { AppTabBar } from '@/components/app-tab-bar';
 import { HapticTab } from "@/components/haptic-tab";
 
 export default function TabLayout() {
   return (
     <Tabs
+      tabBar={(props) => <AppTabBar {...props} />}
       screenOptions={{
         headerShown: false,
         tabBarButton: HapticTab,
@@ -19,8 +21,7 @@ export default function TabLayout() {
           backgroundColor: "#F4EFE8",
           borderTopWidth: 0,
           elevation: 0,
-          height: 78,
-          paddingTop: 10,
+          display: 'none',
         },
       }}
     >
@@ -50,6 +51,12 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="journey-details"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="start-shortcut"
         options={{
           href: null,
         }}
@@ -114,10 +121,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons size={24} name="account-circle" color={color} />
-          ),
+          href: null,
         }}
       />
     </Tabs>
