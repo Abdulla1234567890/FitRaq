@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
+import { router } from "expo-router";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -18,6 +19,11 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const handleContinue = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.replace("/welcome");
+  };
 
   const togglePassword = async () => {
     await Haptics.selectionAsync();
@@ -100,10 +106,13 @@ export default function Login() {
                     <Text style={styles.registerLink}>Register</Text>
                   </Pressable>
                 </View>
-
-                <View style={styles.progressTrack}>
-                  <View style={styles.progressFill} />
-                </View>
+                <Pressable onPress={handleContinue} style={styles.ctaButton}>
+                  <MaterialCommunityIcons
+                    color="#2F42C7"
+                    name="arrow-right"
+                    size={30}
+                  />
+                </Pressable>
               </View>
             </View>
           </View>
@@ -196,18 +205,19 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textDecorationLine: "underline",
   },
-  progressTrack: {
-    width: "100%",
-    height: 10,
-    borderRadius: 999,
-    backgroundColor: "#E4DFD5",
-    overflow: "hidden",
-    marginTop: 18,
-  },
-  progressFill: {
-    width: "82%",
-    height: "100%",
-    borderRadius: 999,
-    backgroundColor: "#2F42C7",
+  ctaButton: {
+    width: 68,
+    height: 68,
+    alignSelf: "center",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 34,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000000",
+    shadowOpacity: 0.14,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+    marginTop: 2,
   },
 });

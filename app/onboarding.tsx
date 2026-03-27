@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
+  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -169,6 +170,7 @@ export default function OnboardingScreen() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
+  const [showGenderDropdown, setShowGenderDropdown] = useState(false);
 
   const pages = useMemo(() => {
     const goal = answers.goal;
@@ -317,7 +319,7 @@ export default function OnboardingScreen() {
         <TextInput
           onChangeText={(value) => updateProfile('name', value)}
           placeholder="What should we call you?"
-          placeholderTextColor="#95A0D9"
+          placeholderTextColor="#A59E97"
           style={styles.input}
           value={profile.name}
         />
@@ -330,7 +332,7 @@ export default function OnboardingScreen() {
             keyboardType="number-pad"
             onChangeText={(value) => updateProfile('age', value)}
             placeholder="Years"
-            placeholderTextColor="#95A0D9"
+            placeholderTextColor="#A59E97"
             style={styles.input}
             value={profile.age}
           />
@@ -342,7 +344,7 @@ export default function OnboardingScreen() {
             keyboardType="decimal-pad"
             onChangeText={(value) => updateProfile('weight', value)}
             placeholder="kg"
-            placeholderTextColor="#95A0D9"
+            placeholderTextColor="#A59E97"
             style={styles.input}
             value={profile.weight}
           />
@@ -356,7 +358,7 @@ export default function OnboardingScreen() {
             keyboardType="decimal-pad"
             onChangeText={(value) => updateProfile('height', value)}
             placeholder="cm"
-            placeholderTextColor="#95A0D9"
+            placeholderTextColor="#A59E97"
             style={styles.input}
             value={profile.height}
           />
@@ -364,34 +366,42 @@ export default function OnboardingScreen() {
 
         <View style={styles.halfField}>
           <Text style={styles.fieldLabel}>Gender</Text>
-          <TextInput
-            editable={false}
-            placeholder={profile.gender || 'Pick below'}
-            placeholderTextColor={profile.gender ? '#FFFFFF' : '#95A0D9'}
-            style={styles.input}
-            value={profile.gender}
-          />
+          <Pressable onPress={() => setShowGenderDropdown(true)}>
+            <View pointerEvents="none">
+              <TextInput
+                editable={false}
+                placeholder={profile.gender || 'Select Gender'}
+                placeholderTextColor={profile.gender ? '#1B140F' : '#A59E97'}
+                style={styles.input}
+                value={profile.gender}
+              />
+            </View>
+          </Pressable>
         </View>
       </View>
 
-      <View style={styles.genderGrid}>
-        {GENDER_OPTIONS.map((option) => {
-          const isSelected = profile.gender === option;
-
-          return (
-            <Pressable
-              key={option}
-              onPress={async () => {
-                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                updateProfile('gender', option);
-              }}
-              style={[styles.choiceChip, isSelected ? styles.choiceChipSelected : undefined]}
-            >
-              <Text style={[styles.choiceChipText, isSelected ? styles.choiceChipTextSelected : undefined]}>{option}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <Modal animationType="fade" transparent visible={showGenderDropdown}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowGenderDropdown(false)}>
+          <View style={styles.dropdownMenu}>
+            {GENDER_OPTIONS.map((option, index) => {
+              const isLast = index === GENDER_OPTIONS.length - 1;
+              return (
+                <Pressable
+                  key={option}
+                  style={[styles.dropdownOption, isLast && { borderBottomWidth: 0 }]}
+                  onPress={async () => {
+                    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    updateProfile('gender', option);
+                    setShowGenderDropdown(false);
+                  }}
+                >
+                  <Text style={styles.dropdownOptionText}>{option}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 
@@ -621,9 +631,10 @@ const styles = StyleSheet.create({
   },
   profileCard: {
     width: '100%',
-    gap: 14,
+    gap: 24,
     minHeight: 340,
     justifyContent: 'center',
+    paddingVertical: 12,
   },
   fieldGroup: {
     gap: 8,
@@ -644,35 +655,35 @@ const styles = StyleSheet.create({
   input: {
     minHeight: 50,
     borderRadius: 18,
-    backgroundColor: '#2F42C7',
-    color: '#FFFFFF',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E8E1D8',
+    color: '#1B140F',
     paddingHorizontal: 16,
     fontSize: 14,
   },
-  genderGrid: {
-    flexDirection: 'row',
-    gap: 10,
-    flexWrap: 'wrap',
-  },
   optionGrid: {
     width: '100%',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 12,
-    justifyContent: 'center',
     minHeight: 320,
-    alignContent: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
   },
   choiceCard: {
-    minWidth: '46%',
-    borderRadius: 22,
+    width: '100%',
+    borderRadius: 24,
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 18,
+    paddingHorizontal: 20,
+    paddingVertical: 22,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: '#E8E1D8',
+    shadowColor: '#000000',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   choiceCardSelected: {
     borderColor: '#2F42C7',
@@ -683,29 +694,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     textAlign: 'center',
+    lineHeight: 20,
   },
   choiceTitleSelected: {
     color: '#2F42C7',
   },
-  choiceChip: {
-    borderRadius: 999,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dropdownMenu: {
+    width: '75%',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: '#E8E1D8',
+    borderRadius: 22,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  choiceChipSelected: {
-    backgroundColor: '#EEF1FF',
-    borderColor: '#2F42C7',
+  dropdownOption: {
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    borderBottomWidth: 1.5,
+    borderBottomColor: '#F4EFE8',
   },
-  choiceChipText: {
+  dropdownOptionText: {
     color: '#1B140F',
-    fontSize: 12,
+    fontSize: 15,
     fontWeight: '700',
-  },
-  choiceChipTextSelected: {
-    color: '#2F42C7',
   },
   footer: {
     alignItems: 'center',
