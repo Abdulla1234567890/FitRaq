@@ -13,8 +13,10 @@ const FILTERS = ['All', 'Walks', 'Runs', 'Hikes'] as const;
 const JOURNEYS = [
   {
     id: 'morning-run',
+    calories: '486 kcal',
     date: '24 February 2026',
     distance: '7.2 km',
+    duration: '46 min',
     location: 'Al Qouz, Dubai',
     month: 'February 2026',
     title: 'Morning Run',
@@ -24,8 +26,10 @@ const JOURNEYS = [
   },
   {
     id: 'sunset-walk',
+    calories: '264 kcal',
     date: '18 February 2026',
     distance: '4.6 km',
+    duration: '38 min',
     location: 'Business Bay, Dubai',
     month: 'February 2026',
     title: 'Sunset Walk',
@@ -35,8 +39,10 @@ const JOURNEYS = [
   },
   {
     id: 'creek-hike',
+    calories: '612 kcal',
     date: '12 January 2026',
     distance: '9.1 km',
+    duration: '1h 54m',
     location: 'Dubai Creek, Dubai',
     month: 'January 2026',
     title: 'Creek Hike',
@@ -126,38 +132,57 @@ export default function JourneysScreen() {
                   }}
                   style={styles.cardWrap}
                 >
-                  <View style={styles.mapCard}>
-                    {Platform.OS === 'web' ? (
-                      <View style={styles.webFallback}>
-                        <MaterialIcons color="#2F42C7" name="map" size={36} />
-                      </View>
-                    ) : (
-                      <MapView
-                        initialRegion={region}
-                        pointerEvents="none"
-                        rotateEnabled={false}
-                        scrollEnabled={false}
-                        showsCompass={false}
-                        showsPointsOfInterest={false}
-                        showsScale={false}
-                        style={styles.map}
-                        zoomEnabled={false}
-                      >
-                        <Polyline coordinates={trail.route} strokeColor="#2F42C7" strokeWidth={4} />
-                        <Marker coordinate={trail.route[0]}>
-                          <View style={styles.routeDotStart} />
-                        </Marker>
-                        <Marker coordinate={trail.route[trail.route.length - 1]}>
-                          <View style={styles.routeDotEnd} />
-                        </Marker>
-                      </MapView>
-                    )}
+                  <View style={styles.cardShell}>
+                    <View style={styles.mapCard}>
+                      {Platform.OS === 'web' ? (
+                        <View style={styles.webFallback}>
+                          <MaterialIcons color="#2F42C7" name="map" size={36} />
+                        </View>
+                      ) : (
+                        <MapView
+                          initialRegion={region}
+                          pointerEvents="none"
+                          rotateEnabled={false}
+                          scrollEnabled={false}
+                          showsCompass={false}
+                          showsPointsOfInterest={false}
+                          showsScale={false}
+                          style={styles.map}
+                          zoomEnabled={false}
+                        >
+                          <Polyline coordinates={trail.route} strokeColor="#2F42C7" strokeWidth={4} />
+                          <Marker coordinate={trail.route[0]}>
+                            <View style={styles.routeDotStart} />
+                          </Marker>
+                          <Marker coordinate={trail.route[trail.route.length - 1]}>
+                            <View style={styles.routeDotEnd} />
+                          </Marker>
+                        </MapView>
+                      )}
 
-                    <View style={styles.mapOverlay}>
-                      <Text style={styles.cardLocation}>{journey.location.split(',')[0]}</Text>
-                      <View style={styles.cardMeta}>
-                        <Text style={styles.cardTitle}>{journey.title}</Text>
-                        <Text style={styles.cardDistance}>{journey.distance}</Text>
+                      <View style={styles.mapOverlay}>
+                        <Text style={styles.cardLocation}>{journey.location.split(',')[0]}</Text>
+                        <View style={styles.cardMeta}>
+                          <Text style={styles.cardTitle}>{journey.title}</Text>
+                          <Text style={styles.cardDistance}>{journey.distance}</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    <View style={styles.cardDetails}>
+                      <View style={styles.cardStatsRow}>
+                        <View style={styles.cardStatPill}>
+                          <MaterialIcons color="#2F42C7" name="calendar-month" size={13} />
+                          <Text style={styles.cardStatTextCompact}>{formatShortDate(journey.date)}</Text>
+                        </View>
+                        <View style={styles.cardStatPill}>
+                          <MaterialIcons color="#2F42C7" name="schedule" size={13} />
+                          <Text style={styles.cardStatTextCompact}>{journey.duration}</Text>
+                        </View>
+                        <View style={styles.cardStatPill}>
+                          <MaterialIcons color="#2F42C7" name="local-fire-department" size={13} />
+                          <Text style={styles.cardStatTextCompact}>{journey.calories}</Text>
+                        </View>
                       </View>
                     </View>
                   </View>
@@ -185,6 +210,18 @@ function createRegionFromRoute(route: Coordinate[]) {
     latitudeDelta: Math.max((maxLat - minLat) * 2, 0.03),
     longitudeDelta: Math.max((maxLng - minLng) * 2, 0.03),
   };
+}
+
+function formatShortDate(date: string) {
+  const parts = date.split(' ');
+  const day = parts[0];
+  const month = parts[1];
+
+  if (!day || !month) {
+    return date;
+  }
+
+  return `${day} ${month.slice(0, 3)}`;
 }
 
 const styles = StyleSheet.create({
@@ -260,16 +297,20 @@ const styles = StyleSheet.create({
   cardWrap: {
     marginBottom: 10,
   },
-  mapCard: {
-    height: 160,
+  cardShell: {
     borderRadius: 34,
-    backgroundColor: '#E0DBD3',
     overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
     shadowColor: '#000000',
     shadowOpacity: 0.14,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 5 },
     elevation: 3,
+  },
+  mapCard: {
+    height: 160,
+    backgroundColor: '#E0DBD3',
+    overflow: 'hidden',
   },
   map: {
     ...StyleSheet.absoluteFillObject,
@@ -308,6 +349,37 @@ const styles = StyleSheet.create({
   cardDistance: {
     color: '#DCE6FF',
     fontSize: 14,
+  },
+  cardDetails: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+  },
+  cardStatsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'nowrap',
+  },
+  cardStatPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    flex: 1,
+    borderRadius: 999,
+    backgroundColor: '#F5F7FF',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    justifyContent: 'center',
+  },
+  cardStatText: {
+    color: '#2F42C7',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  cardStatTextCompact: {
+    color: '#2F42C7',
+    fontSize: 9.5,
+    fontWeight: '600',
   },
   routeDotStart: {
     width: 12,
