@@ -1,6 +1,6 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import * as Haptics from 'expo-haptics';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -42,9 +42,19 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
+          <Pressable
+            onPress={async () => {
+              await Haptics.selectionAsync();
+              router.back();
+            }}
+            style={styles.headerAction}
+          >
+            <MaterialIcons color="#2F42C7" name="arrow-back-ios-new" size={20} />
+          </Pressable>
+
           <View>
             <Text style={styles.eyebrow}>FITRAQ PROFILE</Text>
             <Text style={styles.title}>Profile</Text>

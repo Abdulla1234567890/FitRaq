@@ -46,18 +46,7 @@ export default function ActivityScreen() {
   return (
     <SafeAreaView edges={['left', 'right']} style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.calendarSection}>
-          <View style={[styles.activityHeader, { paddingTop: insets.top + 12 }]}>
-            <View>
-              <Text style={styles.eyebrow}>DAILY TRACKER</Text>
-              <Text style={styles.title}>{selectedDay?.isToday ? 'Today' : `${selectedDay?.day} ${selectedDay?.dateNumber}`}</Text>
-            </View>
-
-            <View style={styles.headerBadge}>
-              <Text style={styles.headerBadgeText}>{completedToday}/{todayTasks.length || 0}</Text>
-            </View>
-          </View>
-
+        <View style={[styles.calendarSection, { paddingTop: insets.top + 12 }]}>
           <View style={styles.calendarCard}>
             <View style={styles.calendarHeaderInline}>
               <Text style={styles.calendarMonthHero}>{monthLabel}</Text>
@@ -120,29 +109,6 @@ export default function ActivityScreen() {
           </View>
         </View>
 
-        <View style={styles.heroCard}>
-          <View style={styles.heroTopRow}>
-            <View>
-              <Text style={styles.heroLabel}>Current week</Text>
-              <Text style={styles.heroTitle}>{currentWeek.title}</Text>
-            </View>
-
-            <View style={styles.ringWrap}>
-              <View style={styles.ringOuter}>
-                <View style={styles.ringInner}>
-                  <Text style={styles.ringValue}>{Math.round(completionRatio * 100)}%</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          <Text style={styles.heroFocus}>{currentWeek.focus}</Text>
-
-          <View style={styles.heroProgressTrack}>
-            <View style={[styles.heroProgressFill, { width: `${Math.max(completionRatio * 100, 8)}%` }]} />
-          </View>
-        </View>
-
         <View style={styles.sectionRow}>
           <Text style={styles.sectionTitle}>Today&apos;s checklist</Text>
           <Text style={styles.sectionMeta}>Tap to update later</Text>
@@ -179,35 +145,49 @@ export default function ActivityScreen() {
           ))}
         </View>
 
-        <View style={styles.weekCard}>
-          <View style={styles.sectionRow}>
-            <Text style={styles.sectionTitle}>This week</Text>
-            <View style={styles.weekPill}>
-              <Text style={styles.weekPillText}>{currentWeek.title}</Text>
+        <View style={styles.heroCard}>
+          <View style={styles.heroTopRow}>
+            <View>
+              <Text style={styles.heroLabel}>Current week</Text>
+              <Text style={styles.heroTitle}>{currentWeek.title}</Text>
+            </View>
+
+            <View style={styles.ringWrap}>
+              <View style={styles.ringOuter}>
+                <View style={styles.ringInner}>
+                  <Text style={styles.ringValue}>{Math.round(completionRatio * 100)}%</Text>
+                </View>
+              </View>
             </View>
           </View>
 
-          <View style={styles.weekStrip}>
+          <Text style={styles.heroFocus}>{currentWeek.focus}</Text>
+
+          <View style={styles.heroProgressTrack}>
+            <View style={[styles.heroProgressFill, { width: `${Math.max(completionRatio * 100, 8)}%` }]} />
+          </View>
+
+          <View style={styles.heroWeekStrip}>
             {weekDays.map((item, index) => (
               <View key={`${item.day}-${index}`} style={styles.dayColumn}>
-                <View style={[styles.dayBarTrack, item.active ? styles.dayBarTrackActive : undefined]}>
+                <View style={[styles.heroDayBarTrack, item.active ? styles.heroDayBarTrackActive : undefined]}>
                   <View
                     style={[
-                      styles.dayBarFill,
-                      item.active ? styles.dayBarFillActive : undefined,
+                      styles.heroDayBarFill,
+                      item.active ? styles.heroDayBarFillActive : undefined,
                       { height: `${Math.max(item.score * 100, 12)}%` },
                     ]}
                   />
                 </View>
-                <Text style={[styles.dayLabel, item.active ? styles.dayLabelActive : undefined]}>{item.day}</Text>
+                <Text style={[styles.heroDayLabel, item.active ? styles.heroDayLabelActive : undefined]}>{item.day}</Text>
               </View>
             ))}
           </View>
 
-          <View style={styles.weekStatsRow}>
-            <WeekStat label="Days done" value={`${completedToday}/${todayTasks.length || 0}`} />
-            <WeekStat label="Current" value={currentWeek.title} />
-            <WeekStat label="Plan" value={resolvedWeeks.length ? `${resolvedWeeks.length} weeks` : 'Static'} />
+          <View style={styles.heroStatsRow}>
+            <WeekStat inverted label="Days done" value={`${completedToday}/${todayTasks.length || 0}`} />
+            <WeekStat inverted label="Current" value={currentWeek.title} />
+            <WeekStat inverted label="Plan" value={resolvedWeeks.length ? `${resolvedWeeks.length} weeks` : 'Static'} />
           </View>
 
           <Pressable
@@ -218,12 +198,13 @@ export default function ActivityScreen() {
                 params: { weekId: currentWeek.id },
               });
             }}
-            style={styles.weekOverviewButton}
+            style={styles.heroOverviewButton}
           >
-            <Text style={styles.weekOverviewButtonText}>View all weeks</Text>
+            <Text style={styles.heroOverviewButtonText}>View all weeks</Text>
             <MaterialIcons color="#2F42C7" name="east" size={18} />
           </Pressable>
         </View>
+
       </ScrollView>
 
       <Modal animationType="fade" onRequestClose={() => setCalendarExpanded(false)} transparent visible={calendarExpanded}>
@@ -319,11 +300,11 @@ export default function ActivityScreen() {
   );
 }
 
-function WeekStat({ label, value }: { label: string; value: string }) {
+function WeekStat({ label, value, inverted = false }: { label: string; value: string; inverted?: boolean }) {
   return (
-    <View style={styles.weekStat}>
-      <Text style={styles.weekStatValue}>{value}</Text>
-      <Text style={styles.weekStatLabel}>{label}</Text>
+    <View style={[styles.weekStat, inverted ? styles.weekStatInverted : undefined]}>
+      <Text style={[styles.weekStatValue, inverted ? styles.weekStatValueInverted : undefined]}>{value}</Text>
+      <Text style={[styles.weekStatLabel, inverted ? styles.weekStatLabelInverted : undefined]}>{label}</Text>
     </View>
   );
 }
@@ -379,38 +360,6 @@ const styles = StyleSheet.create({
   },
   calendarSection: {
     paddingHorizontal: 20,
-  },
-  eyebrow: {
-    color: '#6B5F58',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1.1,
-  },
-  title: {
-    color: '#1B140F',
-    fontSize: 30,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  activityHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  headerBadge: {
-    minWidth: 56,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerBadgeText: {
-    color: '#2F42C7',
-    fontSize: 14,
-    fontWeight: '700',
   },
   calendarCard: {
     backgroundColor: '#FFFFFF',
@@ -655,6 +604,57 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: '#FFFFFF',
   },
+  heroWeekStrip: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  heroDayBarTrack: {
+    width: 20,
+    height: 64,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+  },
+  heroDayBarTrackActive: {
+    backgroundColor: 'rgba(255,255,255,0.24)',
+  },
+  heroDayBarFill: {
+    width: '100%',
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  heroDayBarFillActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  heroDayLabel: {
+    color: 'rgba(255,255,255,0.72)',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  heroDayLabelActive: {
+    color: '#FFFFFF',
+  },
+  heroStatsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  heroOverviewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 14,
+  },
+  heroOverviewButtonText: {
+    color: '#2F42C7',
+    fontSize: 14,
+    fontWeight: '700',
+  },
   sectionRow: {
     marginHorizontal: 20,
     flexDirection: 'row',
@@ -728,83 +728,14 @@ const styles = StyleSheet.create({
   taskStateTextPending: {
     color: '#2F42C7',
   },
-  weekCard: {
-    marginHorizontal: 20,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 18,
-    gap: 16,
-  },
-  weekPill: {
-    borderRadius: 999,
-    backgroundColor: '#EEF1FF',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  weekPillText: {
-    color: '#2F42C7',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  weekStrip: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    gap: 8,
-  },
   dayColumn: {
     flex: 1,
     alignItems: 'center',
     gap: 8,
   },
-  dayBarTrack: {
-    width: 20,
-    height: 76,
-    borderRadius: 999,
-    backgroundColor: '#ECE5DC',
-    justifyContent: 'flex-end',
-    overflow: 'hidden',
-  },
-  dayBarTrackActive: {
-    backgroundColor: '#D9E0FF',
-  },
-  dayBarFill: {
-    width: '100%',
-    borderRadius: 999,
-    backgroundColor: '#B9B3AB',
-  },
-  dayBarFillActive: {
-    backgroundColor: '#2F42C7',
-  },
-  dayLabel: {
-    color: '#8F867F',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  dayLabelActive: {
-    color: '#2F42C7',
-  },
-  weekStatsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  weekOverviewButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderRadius: 18,
-    backgroundColor: '#F3F0EB',
-    paddingVertical: 14,
-  },
-  weekOverviewButtonText: {
-    color: '#2F42C7',
-    fontSize: 14,
-    fontWeight: '700',
-  },
   weekStat: {
     flex: 1,
-    borderRadius: 18,
+    borderRadius: 16,
     backgroundColor: '#F8F5F1',
     paddingHorizontal: 12,
     paddingVertical: 12,
@@ -819,5 +750,14 @@ const styles = StyleSheet.create({
     color: '#8F867F',
     fontSize: 11,
     fontWeight: '600',
+  },
+  weekStatInverted: {
+    backgroundColor: 'rgba(255,255,255,0.14)',
+  },
+  weekStatValueInverted: {
+    color: '#FFFFFF',
+  },
+  weekStatLabelInverted: {
+    color: '#DCE1FF',
   },
 });

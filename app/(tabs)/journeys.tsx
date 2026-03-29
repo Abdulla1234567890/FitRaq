@@ -62,7 +62,7 @@ export default function JourneysScreen() {
   }, {});
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
           <Pressable onPress={() => Haptics.selectionAsync()} style={styles.iconButton}>

@@ -245,34 +245,32 @@ export function AppTabBar({
           })}
         </View>
 
-        <Pressable
-          onLongPress={handleStartLongPress}
-          onPress={handleStartPress}
-          style={styles.startButtonWrap}
-        >
-          <Animated.View
-            style={[
-              styles.startButton,
-              {
-                transform: [
-                  {
-                    scale: animation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [1, 1.06],
-                    }),
-                  },
-                ],
-              },
-            ]}
-          >
-            <MaterialIcons
-              color="#FFFFFF"
-              name="navigation"
-              size={26}
-              style={styles.startIcon}
-            />
-          </Animated.View>
-        </Pressable>
+        <View pointerEvents="box-none" style={styles.startButtonWrap}>
+          <Pressable onLongPress={handleStartLongPress} onPress={handleStartPress}>
+            <Animated.View
+              style={[
+                styles.startButton,
+                {
+                  transform: [
+                    {
+                      scale: animation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 1.06],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <MaterialIcons
+                color="#FFFFFF"
+                name="navigation"
+                size={26}
+                style={styles.startIcon}
+              />
+            </Animated.View>
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -282,9 +280,9 @@ const styles = StyleSheet.create({
   shell: {
     position: "relative",
     paddingHorizontal: 10,
-    paddingBottom: Platform.OS === "ios" ? 20 : 12,
-    paddingTop: 8,
-    backgroundColor: "#F4EFE8",
+    paddingBottom: Platform.OS === "ios" ? 18 : 6,
+    paddingTop: 0,
+    backgroundColor: "#E8E1D8",
   },
   overlayArea: {
     position: "absolute",
@@ -317,9 +315,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   bar: {
-    height: 64,
+    height: 50,
     borderRadius: 0,
-    backgroundColor: "transparent",
+    backgroundColor: "#E8E1D8",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -349,22 +347,23 @@ const styles = StyleSheet.create({
     width: 84,
   },
   tabButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },
   startButtonWrap: {
     position: "absolute",
-    left: "50%",
-    top: -20,
-    marginLeft: -37,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    top: -12,
   },
   startButton: {
-    width: 74,
-    height: 74,
-    borderRadius: 37,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: "#2F42C7",
     alignItems: "center",
     justifyContent: "center",

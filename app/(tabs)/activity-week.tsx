@@ -20,12 +20,11 @@ export default function ActivityWeekScreen() {
   );
 
   const activityWeeks = useMemo(() => resolveActivityWeeks(activityPlan), [activityPlan]);
-  const initialWeekId = useMemo(() => {
-    return activityWeeks.find((item) => item.id === params.weekId)?.id ?? activityWeeks[0].id;
-  }, [activityWeeks, params.weekId]);
-  const [selectedWeekId, setSelectedWeekId] = useState(initialWeekId);
-  const week = activityWeeks.find((item) => item.id === selectedWeekId) ?? activityWeeks[0];
-  const progressValue = week.status === 'completed' ? 100 : week.status === 'current' ? 55 : 0;
+  const defaultExpandedWeek =
+    activityWeeks.find((item) => item.id === params.weekId)?.id ??
+    activityWeeks.find((item) => item.status === 'current')?.id ??
+    activityWeeks[0]?.id;
+  const [expandedWeekId, setExpandedWeekId] = useState(defaultExpandedWeek);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -41,86 +40,131 @@ export default function ActivityWeekScreen() {
             <MaterialIcons color="#2F42C7" name="arrow-back-ios-new" size={20} />
           </Pressable>
 
-          <Text style={styles.headerTitle}>Weekly Overview</Text>
+          <Text style={styles.headerTitle}>Weekly Progress</Text>
 
           <View style={styles.headerSpacer} />
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.weekTabs}>
-          {activityWeeks.map((item) => {
-            const isActive = item.id === week.id;
+        <View style={styles.introCard}>
+          <Text style={styles.introEyebrow}>GAMIFIED PLAN</Text>
+          <Text style={styles.introTitle}>Unlock your next weeks one by one.</Text>
+          <Text style={styles.introSubtitle}>Completed weeks stay visible, the current week stays open, and future weeks remain locked until you earn them.</Text>
+        </View>
+
+        <View style={styles.weekList}>
+          {activityWeeks.map((week, index) => {
+            const isLocked = week.status === 'locked';
+            const isCurrent = week.status === 'current';
+            const isCompleted = week.status === 'completed';
+            const isExpanded = expandedWeekId === week.id && !isLocked;
+            const progressValue = isCompleted ? 100 : isCurrent ? 55 : 0;
 
             return (
               <Pressable
-                key={item.id}
+                key={week.id}
+                disabled={isLocked}
                 onPress={async () => {
+                  if (isLocked) {
+                    return;
+                  }
+
                   await Haptics.selectionAsync();
-                  setSelectedWeekId(item.id);
+                  setExpandedWeekId((current) => (current === week.id ? '' : week.id));
                 }}
-                style={[styles.weekTab, isActive ? styles.weekTabActive : undefined]}
+                style={[
+                  styles.weekCard,
+                  isCurrent ? styles.weekCardCurrent : undefined,
+                  isCompleted ? styles.weekCardCompleted : undefined,
+                  isLocked ? styles.weekCardLocked : undefined,
+                ]}
               >
-                <Text style={[styles.weekTabTitle, isActive ? styles.weekTabTitleActive : undefined]}>{item.title}</Text>
-                <Text style={[styles.weekTabState, isActive ? styles.weekTabStateActive : undefined]}>{item.progressLabel}</Text>
+                <View style={styles.weekCardTop}>
+                  <View style={styles.weekTitleBlock}>
+                    <View style={styles.weekTitleRow}>
+                      <Text style={[styles.weekTitle, isLocked ? styles.weekTitleLocked : undefined]}>{week.title}</Text>
+                      {isCurrent ? (
+                        <View style={styles.currentPill}>
+                          <Text style={styles.currentPillText}>Current</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <Text style={[styles.weekFocus, isLocked ? styles.weekFocusLocked : undefined]}>{week.focus}</Text>
+                  </View>
+
+                  <View
+                    style={[
+                      styles.weekStateBadge,
+                      isCurrent ? styles.weekStateBadgeCurrent : undefined,
+                      isCompleted ? styles.weekStateBadgeCompleted : undefined,
+                      isLocked ? styles.weekStateBadgeLocked : undefined,
+                    ]}
+                  >
+                    <MaterialIcons
+                      color={
+                        isCurrent ? '#2F42C7' : isCompleted ? '#2D7D46' : '#8A817A'
+                      }
+                      name={isCurrent ? 'bolt' : isCompleted ? 'check-circle' : 'lock'}
+                      size={16}
+                    />
+                    {!isCurrent ? (
+                      <Text
+                        style={[
+                          styles.weekStateText,
+                          isCompleted ? styles.weekStateTextCompleted : undefined,
+                          isLocked ? styles.weekStateTextLocked : undefined,
+                        ]}
+                      >
+                        {week.progressLabel}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+
+                <Text style={[styles.weekGoal, isLocked ? styles.weekGoalLocked : undefined]}>{week.goal}</Text>
+
+                <View style={styles.progressRow}>
+                  <View style={styles.progressTrack}>
+                    <View style={[styles.progressFill, { width: `${Math.max(progressValue, 8)}%` }]} />
+                  </View>
+                  <Text style={[styles.progressLabel, isLocked ? styles.progressLabelLocked : undefined]}>
+                    {progressValue}%
+                  </Text>
+                </View>
+
+                {isLocked ? (
+                  <View style={styles.lockedHintRow}>
+                    <MaterialIcons color="#8A817A" name="lock-outline" size={16} />
+                    <Text style={styles.lockedHintText}>Finish {index === 0 ? 'the current week' : activityWeeks[index - 1].title} to unlock this one.</Text>
+                  </View>
+                ) : isExpanded ? (
+                  <View style={styles.expandedBlock}>
+                    <Text style={styles.checklistTitle}>Week checklist</Text>
+                    <View style={styles.taskList}>
+                      {week.tasks.map((task, taskIndex) => (
+                        <View key={`${week.id}-${taskIndex}`} style={styles.taskRow}>
+                          <View style={styles.taskDot} />
+                          <View style={styles.taskCopy}>
+                            <Text style={styles.taskCategory}>{task.category}</Text>
+                            <Text style={styles.taskText}>{task.title}</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+
+                    <View style={styles.insightCard}>
+                      <Text style={styles.insightLabel}>Coach note</Text>
+                      <Text style={styles.insightText}>{week.insight}</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <Text style={styles.tapHint}>Tap to view this week</Text>
+                )}
               </Pressable>
             );
           })}
-        </ScrollView>
-
-        <View style={styles.heroCard}>
-          <Text style={styles.heroFocus}>{week.focus}</Text>
-          <Text style={styles.heroGoal}>{week.goal}</Text>
-          <View style={styles.summaryRow}>
-            <SummaryCell label="Tasks" value={`${week.tasks.length}`} />
-            <SummaryCell label="Progress" value={`${progressValue}%`} />
-            <SummaryCell label="State" value={week.progressLabel} />
-          </View>
-        </View>
-
-        <View style={styles.checklistCard}>
-          <Text style={styles.sectionTitle}>Week checklist</Text>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderText, styles.tableHeaderCategory]}>Category</Text>
-            <Text style={[styles.tableHeaderText, styles.tableHeaderTask]}>Task</Text>
-            <Text style={[styles.tableHeaderText, styles.tableHeaderState]}>State</Text>
-          </View>
-          <View style={styles.taskList}>
-            {week.tasks.map((task, index) => (
-              <View key={`${task.category}-${index}`} style={styles.taskItem}>
-                <Text style={styles.taskCategory}>{task.category}</Text>
-                <Text style={styles.taskTitle}>{task.title}</Text>
-                <View style={styles.taskStatePill}>
-                  <Text style={styles.taskStateText}>{week.status === 'completed' ? 'Done' : index === 0 && week.status === 'current' ? 'Now' : 'Queued'}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.stateCard}>
-          <View style={styles.progressHeader}>
-            <Text style={styles.sectionTitle}>Progress</Text>
-            <Text style={styles.progressValue}>{progressValue}%</Text>
-          </View>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${Math.max(progressValue, 8)}%` }]} />
-          </View>
-
-          <View style={styles.insightRow}>
-            <Text style={styles.insightLabel}>Coach note</Text>
-            <Text style={styles.insightCopy}>{week.insight}</Text>
-          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-function SummaryCell({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.summaryCell}>
-      <Text style={styles.summaryValue}>{value}</Text>
-      <Text style={styles.summaryLabel}>{label}</Text>
-    </View>
   );
 }
 
@@ -156,167 +200,151 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 42,
   },
-  weekTabs: {
-    gap: 10,
-  },
-  weekTab: {
-    minWidth: 110,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    gap: 4,
-  },
-  weekTabActive: {
-    backgroundColor: '#2F42C7',
-  },
-  weekTabTitle: {
-    color: '#1B140F',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  weekTabTitleActive: {
-    color: '#FFFFFF',
-  },
-  weekTabState: {
-    color: '#7E766F',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  weekTabStateActive: {
-    color: '#DCE1FF',
-  },
-  heroCard: {
-    backgroundColor: '#2F42C7',
-    borderRadius: 28,
-    padding: 20,
-    gap: 14,
-  },
-  heroFocus: {
-    color: '#FFFFFF',
-    fontSize: 26,
-    fontWeight: '700',
-  },
-  heroGoal: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '600',
-    lineHeight: 24,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  summaryCell: {
-    flex: 1,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    gap: 4,
-  },
-  summaryValue: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  summaryLabel: {
-    color: '#DCE1FF',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  checklistCard: {
-    backgroundColor: '#FFFFFF',
+  introCard: {
     borderRadius: 24,
-    padding: 18,
-    gap: 14,
+    backgroundColor: '#FBF9F5',
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    gap: 8,
   },
-  sectionTitle: {
-    color: '#1B140F',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  taskList: {
-    gap: 10,
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-  },
-  tableHeaderText: {
-    color: '#8F867F',
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  tableHeaderCategory: {
-    width: 84,
-  },
-  tableHeaderTask: {
-    flex: 1,
-  },
-  tableHeaderState: {
-    width: 64,
-    textAlign: 'right',
-  },
-  taskItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderRadius: 18,
-    backgroundColor: '#F8F5F1',
-    padding: 12,
-  },
-  taskCategory: {
-    width: 84,
+  introEyebrow: {
     color: '#8F867F',
     fontSize: 12,
     fontWeight: '700',
+    letterSpacing: 1,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
   },
-  taskTitle: {
-    flex: 1,
+  introTitle: {
     color: '#1B140F',
+    fontSize: 28,
+    lineHeight: 32,
+    fontWeight: '700',
+  },
+  introSubtitle: {
+    color: '#756C65',
     fontSize: 14,
     lineHeight: 20,
-    fontWeight: '600',
   },
-  taskStatePill: {
-    width: 64,
-    borderRadius: 999,
-    backgroundColor: '#EEF1FF',
-    paddingVertical: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
+  weekList: {
+    gap: 14,
   },
-  taskStateText: {
-    color: '#2F42C7',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  stateCard: {
+  weekCard: {
+    borderRadius: 26,
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(47,66,199,0.08)',
+  },
+  weekCardCurrent: {
+    backgroundColor: '#EEF1FF',
+    borderColor: 'rgba(47,66,199,0.14)',
+  },
+  weekCardCompleted: {
+    backgroundColor: '#F8FBF8',
+    borderColor: 'rgba(45,125,70,0.12)',
+  },
+  weekCardLocked: {
+    backgroundColor: '#F0ECE6',
+    borderColor: 'rgba(138,129,122,0.14)',
+  },
+  weekCardTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
     gap: 12,
   },
-  progressHeader: {
+  weekTitleBlock: {
+    flex: 1,
+    gap: 4,
+  },
+  weekTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 8,
+    flexWrap: 'wrap',
   },
-  progressValue: {
+  weekTitle: {
+    color: '#1B140F',
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  currentPill: {
+    borderRadius: 999,
+    backgroundColor: '#DDE5FF',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  currentPillText: {
     color: '#2F42C7',
-    fontSize: 18,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
+  },
+  weekTitleLocked: {
+    color: '#746C66',
+  },
+  weekFocus: {
+    color: '#5F6DCB',
+    fontSize: 14,
     fontWeight: '700',
   },
-  progressTrack: {
-    height: 10,
+  weekFocusLocked: {
+    color: '#8A817A',
+  },
+  weekStateBadge: {
     borderRadius: 999,
-    backgroundColor: '#E7E0D8',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  weekStateBadgeCurrent: {
+    backgroundColor: '#FFFFFF',
+  },
+  weekStateBadgeCompleted: {
+    backgroundColor: '#EFF8F1',
+  },
+  weekStateBadgeLocked: {
+    backgroundColor: '#E6E0D8',
+  },
+  weekStateText: {
+    color: '#1B140F',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  weekStateTextCurrent: {
+    color: '#2F42C7',
+  },
+  weekStateTextCompleted: {
+    color: '#2D7D46',
+  },
+  weekStateTextLocked: {
+    color: '#746C66',
+  },
+  weekGoal: {
+    color: '#1B140F',
+    fontSize: 16,
+    lineHeight: 23,
+    fontWeight: '600',
+  },
+  weekGoalLocked: {
+    color: '#746C66',
+  },
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  progressTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: '#E5E8F7',
     overflow: 'hidden',
   },
   progressFill: {
@@ -324,22 +352,89 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: '#2F42C7',
   },
-  insightRow: {
-    borderRadius: 18,
-    backgroundColor: '#F8F5F1',
-    padding: 14,
-    gap: 6,
+  progressLabel: {
+    color: '#2F42C7',
+    fontSize: 12,
+    fontWeight: '700',
   },
-  insightLabel: {
+  progressLabelLocked: {
+    color: '#8A817A',
+  },
+  lockedHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  lockedHintText: {
+    flex: 1,
+    color: '#746C66',
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
+  },
+  expandedBlock: {
+    gap: 14,
+  },
+  checklistTitle: {
+    color: '#1B140F',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  taskList: {
+    gap: 10,
+  },
+  taskRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  taskDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: '#2F42C7',
+    marginTop: 6,
+  },
+  taskCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  taskCategory: {
     color: '#8F867F',
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
-  insightCopy: {
-    color: '#6E665F',
+  taskText: {
+    color: '#1B140F',
     fontSize: 14,
-    lineHeight: 22,
+    lineHeight: 20,
+    fontWeight: '600',
+  },
+  insightCard: {
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 4,
+  },
+  insightLabel: {
+    color: '#8F867F',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  insightText: {
+    color: '#1B140F',
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '600',
+  },
+  tapHint: {
+    color: '#7A726B',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
