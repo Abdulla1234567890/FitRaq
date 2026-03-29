@@ -118,6 +118,7 @@ export default function JourneysScreen() {
                         date: journey.date,
                         distance: journey.distance,
                         location: journey.location,
+                        trailId: journey.trailId,
                         title: journey.title,
                         xp: journey.xp,
                       },

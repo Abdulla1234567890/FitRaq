@@ -1,6 +1,5 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
-import { Image } from "expo-image";
 import { router } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,28 +7,28 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const PATH_OPTIONS = [
   {
     id: "running",
-    image: require("@/assets/images/Running.png"),
+    icon: "directions-run",
     label: "Running",
     accent: "#2F42C7",
     tint: "#EEF1FF",
   },
   {
     id: "walking",
-    image: require("@/assets/images/Walking.png"),
+    icon: "directions-walk",
     label: "Walking",
     accent: "#6A73D6",
     tint: "#F1F0FF",
   },
   {
     id: "cycling",
-    image: require("@/assets/images/Cycling.png"),
+    icon: "pedal-bike",
     label: "Cycling",
     accent: "#4C72BA",
     tint: "#EEF5FF",
   },
   {
     id: "hiking",
-    image: require("@/assets/images/Hiking.png"),
+    icon: "terrain",
     label: "Hiking",
     accent: "#7D9B52",
     tint: "#F1F7E8",
@@ -85,11 +84,13 @@ export default function ChoosePathScreen() {
                 <Text style={styles.pathLabel}>{option.label}</Text>
                 <Text style={styles.pathMeta}>View routes</Text>
               </View>
-              <Image
-                contentFit="contain"
-                source={option.image}
-                style={styles.pathImage}
-              />
+              <View style={styles.pathIconWrap}>
+                <MaterialIcons
+                  color={option.accent}
+                  name={option.icon as keyof typeof MaterialIcons.glyphMap}
+                  size={48}
+                />
+              </View>
             </Pressable>
           ))}
         </View>
@@ -191,8 +192,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
-  pathImage: {
-    width: 126,
-    height: 116,
+  pathIconWrap: {
+    width: 88,
+    height: 88,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
