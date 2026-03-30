@@ -44,94 +44,11 @@ type NutritionAnalysis = {
 };
 
 const INITIAL_DAYS: NutritionDay[] = [
-  {
-    id: "mon-09",
-    weekday: "MO",
-    dateNumber: "9",
-    calories: 1840,
-    meals: {
-      breakfast: "Greek yogurt with berries and honey",
-      lunch: "Chicken shawarma bowl with rice",
-      dinner: "Salmon, potatoes, and green beans",
-    },
-    extras: ["Protein bar after workout"],
-  },
-  {
-    id: "tue-10",
-    weekday: "TU",
-    dateNumber: "10",
-    calories: 1720,
-    meals: {
-      breakfast: "Oatmeal with banana",
-      lunch: "Turkey sandwich and salad",
-      dinner: "Pasta with grilled chicken",
-    },
-    extras: ["Coffee and dates"],
-  },
-  {
-    id: "we-11",
-    weekday: "WE",
-    dateNumber: "11",
-    calories: 1960,
-    meals: {
-      breakfast: "Eggs and toast",
-      lunch: "Beef wrap and yogurt",
-      dinner: "Rice bowl with vegetables",
-    },
-    extras: [],
-  },
-  {
-    id: "th-12",
-    weekday: "TH",
-    dateNumber: "12",
-    calories: 1630,
-    meals: {
-      breakfast: "",
-      lunch: "",
-      dinner: "",
-    },
-    extras: [],
-  },
-  {
-    id: "fr-13",
-    weekday: "FR",
-    dateNumber: "13",
-    calories: 0,
-    meals: {
-      breakfast: "",
-      lunch: "",
-      dinner: "",
-    },
-    extras: [],
-  },
-  {
-    id: "sa-14",
-    weekday: "SA",
-    dateNumber: "14",
-    calories: 0,
-    meals: {
-      breakfast: "",
-      lunch: "",
-      dinner: "",
-    },
-    extras: [],
-  },
-  {
-    id: "su-15",
-    weekday: "SU",
-    dateNumber: "15",
-    calories: 0,
-    meals: {
-      breakfast: "",
-      lunch: "",
-      dinner: "",
-    },
-    extras: [],
-  },
+  ...createNutritionDays(new Date()),
 ];
 
 export default function NutritionScreen() {
-  const [selectedDayId, setSelectedDayId] = useState("sa-14");
+  const [selectedDayId, setSelectedDayId] = useState(createNutritionDayId(new Date()));
   const [days, setDays] = useState(INITIAL_DAYS);
   const [submitState, setSubmitState] = useState(
     "Meals ready to send to the calorie model.",
@@ -139,7 +56,14 @@ export default function NutritionScreen() {
   const [analysis, setAnalysis] = useState<NutritionAnalysis | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [calendarVisible, setCalendarVisible] = useState(false);
-  const monthLabel = "March 2026";
+  const monthLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        year: "numeric",
+      }).format(createDateFromId(selectedDayId)),
+    [selectedDayId],
+  );
 
   const selectedDay = days.find((day) => day.id === selectedDayId) ?? days[0];
   const hasMealContent = useMemo(
@@ -300,6 +224,10 @@ export default function NutritionScreen() {
           </View>
 
           <View style={styles.calendarCard}>
+            <View style={styles.calendarHeaderInline}>
+              <Text style={styles.calendarMonthHero}>{monthLabel}</Text>
+            </View>
+
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -609,6 +537,45 @@ function AnalysisPill({ label, value }: { label: string; value: number }) {
   );
 }
 
+function createNutritionDays(anchor: Date): NutritionDay[] {
+  const today = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+  const dayOfWeek = today.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + mondayOffset);
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+
+    return {
+      id: createNutritionDayId(date),
+      weekday: new Intl.DateTimeFormat("en-US", { weekday: "short" })
+        .format(date)
+        .slice(0, 2)
+        .toUpperCase(),
+      dateNumber: `${date.getDate()}`,
+      calories: 0,
+      meals: {
+        breakfast: "",
+        lunch: "",
+        dinner: "",
+      },
+      extras: [],
+    };
+  });
+}
+
+function createNutritionDayId(date: Date) {
+  return `day-${date.getFullYear()}-${`${date.getMonth() + 1}`.padStart(2, "0")}-${`${date.getDate()}`.padStart(2, "0")}`;
+}
+
+function createDateFromId(id: string) {
+  const parts = id.replace("day-", "").split("-");
+  const [year, month, day] = parts.map(Number);
+  return new Date(year, (month || 1) - 1, day || 1);
+}
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -752,6 +719,15 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 1,
+  },
+  calendarHeaderInline: {
+    paddingHorizontal: 6,
+    paddingBottom: 12,
+  },
+  calendarMonthHero: {
+    color: "#1B140F",
+    fontSize: 24,
+    fontWeight: "700",
   },
   calendarRow: {
     gap: 12,
