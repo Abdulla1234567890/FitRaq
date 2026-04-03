@@ -287,6 +287,7 @@ export default function NutritionScreen() {
               <Text style={styles.calorieBadgeText}>Daily total</Text>
             </View>
           </View>
+
         </View>
 
         <View style={styles.mealSection}>

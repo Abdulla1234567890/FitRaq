@@ -15,16 +15,6 @@ const WEEK_BARS = [
   { day: "S", value: 0.24 },
 ] as const;
 
-const STREAK_DAYS = [
-  { day: "M", date: "9" },
-  { day: "T", date: "10" },
-  { day: "W", date: "11" },
-  { day: "T", date: "12" },
-  { day: "F", date: "13" },
-  { day: "S", date: "14", active: true },
-  { day: "S", date: "15", muted: true },
-] as const;
-
 export default function HomePageScreen() {
   const params = useLocalSearchParams<{ name?: string }>();
   const firstName = useMemo(() => {
@@ -98,49 +88,25 @@ export default function HomePageScreen() {
           </View>
         </View>
 
-        <View style={styles.streakCard}>
-          <View style={styles.streakHeader}>
-            <View>
-              <Text style={styles.streakTitle}>7 days 🔥</Text>
-              <Text style={styles.streakSubtitle}>Keep it going</Text>
-            </View>
-
-            <View style={styles.streakBadge}>
-              <Text style={styles.streakBadgeText}>On fire</Text>
-            </View>
-          </View>
-
-          <View style={styles.streakRow}>
-            {STREAK_DAYS.map((item, index) => (
-              <View key={`${item.day}-${index}`} style={styles.streakDayWrap}>
-                <View
-                  style={[
-                    styles.streakDayCircle,
-                    item.active ? styles.streakDayCircleActive : undefined,
-                    item.muted ? styles.streakDayCircleMuted : undefined,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.streakDayText,
-                      item.active ? styles.streakDayTextActive : undefined,
-                      item.muted ? styles.streakDayTextMuted : undefined,
-                    ]}
-                  >
-                    {item.day}
-                  </Text>
-                </View>
-                <Text
-                  style={[
-                    styles.streakDate,
-                    item.active ? styles.streakDateActive : undefined,
-                  ]}
-                >
-                  {item.date}
-                </Text>
-              </View>
-            ))}
-          </View>
+        <View style={styles.insightRow}>
+          <InsightCard
+            accent="+8%"
+            accentColor="#FF7B45"
+            icon="local-fire-department"
+            label="Calories"
+            tone="warm"
+            unit="kcal"
+            value="320"
+          />
+          <InsightCard
+            accent="Steady"
+            accentColor="#2DBD5A"
+            icon="monitor-heart"
+            label="Active minutes"
+            tone="cool"
+            unit="min"
+            value="42"
+          />
         </View>
 
         <View style={styles.stepsCard}>
@@ -188,26 +154,59 @@ export default function HomePageScreen() {
           </View>
         </View>
 
-        <View style={styles.insightRow}>
-          <InsightCard
-            accent="+8%"
-            accentColor="#FF7B45"
-            icon="local-fire-department"
-            label="Calories"
-            tone="warm"
-            unit="kcal"
-            value="320"
-          />
-          <InsightCard
-            accent="Normal"
-            accentColor="#2DBD5A"
-            icon="favorite-outline"
-            label="Heart rate"
-            tone="cool"
-            unit="bpm"
-            value="98"
-          />
+        <View style={styles.nutritionCard}>
+          <View style={styles.nutritionHeader}>
+            <View>
+              <Text style={styles.nutritionEyebrow}>TODAY&apos;S FUEL</Text>
+              <Text style={styles.nutritionTitle}>1,640 kcal</Text>
+              <Text style={styles.nutritionSubcopy}>of 2,000 kcal target</Text>
+            </View>
+
+            <Pressable
+              onPress={async () => {
+                await Haptics.selectionAsync();
+                router.push("/(tabs)/nutrition");
+              }}
+              style={styles.nutritionBadge}
+            >
+              <Text style={styles.nutritionBadgeValue}>82%</Text>
+              <Text style={styles.nutritionBadgeLabel}>logged</Text>
+            </Pressable>
+          </View>
+
+          <View style={styles.nutritionMealsRow}>
+            <MealStatusChip done label="Breakfast" />
+            <MealStatusChip done label="Lunch" />
+            <MealStatusChip label="Dinner" />
+          </View>
+
+          <View style={styles.nutritionFooterRow}>
+            <View style={styles.nutritionMetaPill}>
+              <MaterialIcons color="#FF7B45" name="local-cafe" size={15} />
+              <Text style={styles.nutritionMetaText}>1 snack</Text>
+            </View>
+
+            <View style={styles.nutritionMetaPill}>
+              <MaterialIcons
+                color="#2DBD5A"
+                name="check-circle-outline"
+                size={15}
+              />
+              <Text style={styles.nutritionMetaText}>On track</Text>
+            </View>
+
+            <Pressable
+              onPress={async () => {
+                await Haptics.selectionAsync();
+                router.push("/(tabs)/nutrition");
+              }}
+              style={styles.nutritionButton}
+            >
+              <Text style={styles.nutritionButtonText}>Open</Text>
+            </Pressable>
+          </View>
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -285,6 +284,40 @@ function InsightCard({
           ),
         )}
       </View>
+    </View>
+  );
+}
+
+function MealStatusChip({
+  done,
+  label,
+}: {
+  done?: boolean;
+  label: string;
+}) {
+  return (
+    <View
+      style={[
+        styles.mealStatusChip,
+        done ? styles.mealStatusChipDone : undefined,
+      ]}
+    >
+      <View
+        style={[
+          styles.mealStatusDot,
+          done ? styles.mealStatusDotDone : undefined,
+        ]}
+      >
+        {done ? <MaterialIcons color="#FFFFFF" name="check" size={13} /> : null}
+      </View>
+      <Text
+        style={[
+          styles.mealStatusText,
+          done ? styles.mealStatusTextDone : undefined,
+        ]}
+      >
+        {label}
+      </Text>
     </View>
   );
 }
@@ -442,79 +475,124 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.8,
   },
-  streakCard: {
+  nutritionCard: {
     borderRadius: 24,
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 18,
     paddingVertical: 16,
-    gap: 14,
+    gap: 16,
   },
-  streakHeader: {
+  nutritionHeader: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
+    gap: 12,
   },
-  streakTitle: {
-    color: "#1E1A17",
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  streakSubtitle: {
+  nutritionEyebrow: {
     color: "#8F867F",
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+  },
+  nutritionTitle: {
+    color: "#1E1A17",
+    fontSize: 30,
+    fontWeight: "800",
     marginTop: 2,
   },
-  streakBadge: {
-    borderRadius: 999,
-    backgroundColor: "#FFF1E8",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+  nutritionSubcopy: {
+    color: "#8F867F",
+    fontSize: 13,
+    fontWeight: "600",
+    marginTop: 4,
   },
-  streakBadgeText: {
-    color: "#FF7B45",
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  streakRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  streakDayWrap: {
-    alignItems: "center",
-    gap: 6,
-  },
-  streakDayCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "#EEF1FF",
+  nutritionBadge: {
+    minWidth: 70,
+    borderRadius: 18,
+    backgroundColor: "#FFF8F4",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     alignItems: "center",
     justifyContent: "center",
+    gap: 2,
   },
-  streakDayCircleActive: {
+  nutritionBadgeValue: {
+    color: "#FF7B45",
+    fontSize: 22,
+    fontWeight: "800",
+    lineHeight: 22,
+  },
+  nutritionBadgeLabel: {
+    color: "#C38972",
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  nutritionMealsRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  mealStatusChip: {
+    flex: 1,
+    borderRadius: 18,
+    backgroundColor: "#F6F2EE",
+    paddingHorizontal: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+    gap: 8,
+  },
+  mealStatusChipDone: {
+    backgroundColor: "#EEF2FF",
+  },
+  mealStatusDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "#E3DDD7",
+  },
+  mealStatusDotDone: {
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "#2F42C7",
   },
-  streakDayCircleMuted: {
-    backgroundColor: "#F0EFEC",
-  },
-  streakDayText: {
-    color: "#5667CF",
+  mealStatusText: {
+    color: "#8F867F",
     fontSize: 12,
     fontWeight: "700",
   },
-  streakDayTextActive: {
-    color: "#FFFFFF",
+  mealStatusTextDone: {
+    color: "#2F42C7",
   },
-  streakDayTextMuted: {
-    color: "#B5AEA7",
+  nutritionFooterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
-  streakDate: {
-    color: "#A09A93",
-    fontSize: 10,
+  nutritionMetaPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 999,
+    backgroundColor: "#FFF8F4",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  nutritionMetaText: {
+    color: "#6F6761",
+    fontSize: 12,
     fontWeight: "700",
   },
-  streakDateActive: {
-    color: "#2F42C7",
+  nutritionButton: {
+    marginLeft: "auto",
+    borderRadius: 999,
+    backgroundColor: "#2F42C7",
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  nutritionButtonText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
   },
   stepsCard: {
     borderRadius: 24,
