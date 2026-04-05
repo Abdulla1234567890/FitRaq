@@ -6,7 +6,17 @@ import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { resolveActivityWeeks, resolveTodayTasks, resolveWeekBars } from './activity-program';
+import { resolveActivityWeeks, resolveTasksForDay, resolveWeekBars } from '@/lib/activity-program';
+
+const DAY_CODE_TO_NAME: Record<string, string> = {
+  FR: 'Friday',
+  MO: 'Monday',
+  SA: 'Saturday',
+  SU: 'Sunday',
+  TH: 'Thursday',
+  TU: 'Tuesday',
+  WE: 'Wednesday',
+};
 
 export default function ActivityScreen() {
   const insets = useSafeAreaInsets();
@@ -18,19 +28,24 @@ export default function ActivityScreen() {
     }, [])
   );
 
-  const todayTasks = useMemo(() => resolveTodayTasks(activityPlan), [activityPlan]);
-  const weekDays = useMemo(() => resolveWeekBars(activityPlan), [activityPlan]);
-  const resolvedWeeks = useMemo(() => resolveActivityWeeks(activityPlan), [activityPlan]);
-  const currentWeek = resolvedWeeks.find((week) => week.status === 'current') ?? resolvedWeeks[0];
   const today = useMemo(() => startOfDay(new Date()), []);
   const [selectedDate, setSelectedDate] = useState(today);
   const [displayedMonth, setDisplayedMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [calendarExpanded, setCalendarExpanded] = useState(false);
   const selectedDay = useMemo(() => createCalendarDay(selectedDate, today), [selectedDate, today]);
+  const selectedWeekdayLabel = DAY_CODE_TO_NAME[selectedDay.day] ?? selectedDay.day;
+  const { tasks: todayTasks } = useMemo(
+    () => resolveTasksForDay(activityPlan, selectedWeekdayLabel),
+    [activityPlan, selectedWeekdayLabel]
+  );
+  const weekDays = useMemo(() => resolveWeekBars(activityPlan), [activityPlan]);
+  const resolvedWeeks = useMemo(() => resolveActivityWeeks(activityPlan), [activityPlan]);
+  const currentWeek = resolvedWeeks.find((week) => week.status === 'current') ?? resolvedWeeks[0];
   const visibleDays = useMemo(
     () => Array.from({ length: 7 }, (_, index) => createCalendarDay(addDays(selectedDate, index - 3), today)),
     [selectedDate, today]
   );
+  const maxUnlockedDate = useMemo(() => addDays(today, 2), [today]);
   const monthDays = useMemo(() => getMonthDays(displayedMonth, today), [displayedMonth, today]);
   const monthLabel = useMemo(
     () =>
@@ -65,22 +80,25 @@ export default function ActivityScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.calendarRow}>
               {visibleDays.map((day) => {
                 const isActive = day.id === selectedDay.id;
+                const isLocked = day.date > maxUnlockedDate;
 
                 return (
                   <Pressable
                     key={day.id}
                     onPress={async () => {
+                      if (isLocked) return;
                       await Haptics.selectionAsync();
                       setSelectedDate(day.date);
                       setDisplayedMonth(new Date(day.date.getFullYear(), day.date.getMonth(), 1));
                     }}
-                    style={styles.dayItem}
+                    style={[styles.dayItem, isLocked ? styles.dayItemLocked : undefined]}
                   >
                     <Text
                       style={[
                         styles.calendarWeekday,
                         day.isToday ? styles.calendarWeekdayToday : undefined,
                         isActive ? styles.calendarWeekdayActive : undefined,
+                        isLocked ? styles.calendarWeekdayLocked : undefined,
                       ]}
                     >
                       {day.day}
@@ -90,6 +108,7 @@ export default function ActivityScreen() {
                         styles.calendarDateCircle,
                         day.isToday ? styles.calendarDateCircleToday : undefined,
                         isActive ? styles.calendarDateCircleActive : undefined,
+                        isLocked ? styles.calendarDateCircleLocked : undefined,
                       ]}
                     >
                       <Text
@@ -97,6 +116,7 @@ export default function ActivityScreen() {
                           styles.calendarDateText,
                           day.isToday ? styles.calendarDateTextToday : undefined,
                           isActive ? styles.calendarDateTextActive : undefined,
+                          isLocked ? styles.calendarDateTextLocked : undefined,
                         ]}
                       >
                         {day.dateNumber}
@@ -106,6 +126,7 @@ export default function ActivityScreen() {
                 );
               })}
             </ScrollView>
+
           </View>
         </View>
 
@@ -258,7 +279,7 @@ export default function ActivityScreen() {
                 ))}
               </View>
 
-              <View style={styles.monthGrid}>
+              <ScrollView contentContainerStyle={styles.monthGrid} style={styles.monthGridScroll}>
                 {monthDays.map((day) => {
                   const isActive = day.id === selectedDay.id;
 
@@ -291,7 +312,7 @@ export default function ActivityScreen() {
                     </Pressable>
                   );
                 })}
-              </View>
+              </ScrollView>
             </View>
           </View>
         </View>
@@ -397,10 +418,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  dayItemLocked: {
+    opacity: 0.45,
+  },
   calendarWeekday: {
     color: '#1B140F',
     fontSize: 14,
     fontWeight: '500',
+  },
+  calendarWeekdayLocked: {
+    color: '#9E968F',
   },
   calendarWeekdayActive: {
     color: '#2F42C7',
@@ -414,6 +441,9 @@ const styles = StyleSheet.create({
     borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  calendarDateCircleLocked: {
+    backgroundColor: '#EFE9E2',
   },
   calendarDateCircleActive: {
     backgroundColor: '#2F42C7',
@@ -430,6 +460,9 @@ const styles = StyleSheet.create({
     color: '#1B140F',
     fontSize: 15,
     fontWeight: '500',
+  },
+  calendarDateTextLocked: {
+    color: '#A29B93',
   },
   calendarDateTextToday: {
     color: '#2F42C7',
@@ -502,6 +535,9 @@ const styles = StyleSheet.create({
     color: '#8F867F',
     fontSize: 11,
     fontWeight: '700',
+  },
+  monthGridScroll: {
+    maxHeight: 280,
   },
   monthGrid: {
     flexDirection: 'row',

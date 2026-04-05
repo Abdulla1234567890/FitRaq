@@ -6,7 +6,7 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { TRAILS, type Coordinate } from './journey-data';
+import { TRAILS, type Coordinate } from '@/lib/journey-data';
 
 const FILTERS = ['All', 'Walks', 'Runs', 'Hikes'] as const;
 

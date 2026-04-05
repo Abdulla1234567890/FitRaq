@@ -1,9 +1,11 @@
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
-import { useMemo } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { getCurrentNutritionCalories } from "@/lib/user-session";
 
 const WEEK_BARS = [
   { day: "M", value: 0.4 },
@@ -17,10 +19,24 @@ const WEEK_BARS = [
 
 export default function HomePageScreen() {
   const params = useLocalSearchParams<{ name?: string }>();
+  const [nutritionCalories, setNutritionCalories] = useState(() =>
+    getCurrentNutritionCalories(),
+  );
   const firstName = useMemo(() => {
     const rawName = Array.isArray(params.name) ? params.name[0] : params.name;
     return rawName?.trim() || "Janna";
   }, [params.name]);
+  const nutritionTarget = 2000;
+  const nutritionLoggedPercent = Math.max(
+    0,
+    Math.min(100, Math.round((nutritionCalories / nutritionTarget) * 100)),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      setNutritionCalories(getCurrentNutritionCalories());
+    }, []),
+  );
 
   const handleOpenMenu = async () => {
     await Haptics.selectionAsync();
@@ -96,7 +112,7 @@ export default function HomePageScreen() {
             label="Calories"
             tone="warm"
             unit="kcal"
-            value="320"
+            value={`${nutritionCalories}`}
           />
           <InsightCard
             accent="Steady"
@@ -158,8 +174,12 @@ export default function HomePageScreen() {
           <View style={styles.nutritionHeader}>
             <View>
               <Text style={styles.nutritionEyebrow}>TODAY&apos;S FUEL</Text>
-              <Text style={styles.nutritionTitle}>1,640 kcal</Text>
-              <Text style={styles.nutritionSubcopy}>of 2,000 kcal target</Text>
+              <Text style={styles.nutritionTitle}>
+                {nutritionCalories.toLocaleString()} kcal
+              </Text>
+              <Text style={styles.nutritionSubcopy}>
+                of {nutritionTarget.toLocaleString()} kcal target
+              </Text>
             </View>
 
             <Pressable
@@ -169,7 +189,9 @@ export default function HomePageScreen() {
               }}
               style={styles.nutritionBadge}
             >
-              <Text style={styles.nutritionBadgeValue}>82%</Text>
+              <Text style={styles.nutritionBadgeValue}>
+                {nutritionLoggedPercent}%
+              </Text>
               <Text style={styles.nutritionBadgeLabel}>logged</Text>
             </Pressable>
           </View>

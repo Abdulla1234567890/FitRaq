@@ -122,7 +122,7 @@ export function resolveActivityWeeks(plan: ActivityPlan | null) {
   })) satisfies ActivityWeek[];
 }
 
-export function resolveTodayTasks(plan: ActivityPlan | null) {
+export function resolveTodayTasks(plan: ActivityPlan | null, startDate = new Date(), days = 1) {
   if (!plan?.weeks?.length) {
     return [
       { id: 'steps', label: '8,000 steps', progress: '6.3k / 8k', done: false, icon: 'directions-walk' },
@@ -133,17 +133,81 @@ export function resolveTodayTasks(plan: ActivityPlan | null) {
   }
 
   const currentWeek = plan.weeks.find((week) => week.week === plan.current_week) ?? plan.weeks[0];
-  const todayLabel = DAY_LABELS[new Date().getDay()];
-  const currentDay =
-    currentWeek.days.find((day) => day.day.toLowerCase() === todayLabel.toLowerCase()) ?? currentWeek.days[0];
+  const normalizeDay = (value: string) => value.toLowerCase().replace(/[^a-z]/g, '');
+  const orderedWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const orderedWeekShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayNameToIndex = new Map<string, number>();
 
-  return currentDay.tasks.map((task, index) => ({
-    id: `${currentWeek.week}-${currentDay.day}-${index}`,
-    label: task.label,
-    progress: task.target ?? 'Planned',
-    done: false,
-    icon: iconForTaskType(task.type),
-  })) satisfies ActivityTaskCard[];
+  orderedWeek.forEach((name, index) => {
+    dayNameToIndex.set(normalizeDay(name), index);
+  });
+  orderedWeekShort.forEach((name, index) => {
+    dayNameToIndex.set(normalizeDay(name), index);
+  });
+
+  const weekByIndex = Array<ActivityPlan['weeks'][number]['days'][number] | undefined>(7).fill(undefined);
+  currentWeek.days.forEach((day) => {
+    const index = dayNameToIndex.get(normalizeDay(day.day));
+    if (index !== undefined) {
+      weekByIndex[index] = day;
+    }
+  });
+  const totalDays = Math.max(days, 1);
+
+  return Array.from({ length: totalDays }, (_, offset) => {
+    const date = new Date(startDate);
+    date.setDate(date.getDate() + offset);
+    const dayIndex = date.getDay();
+    const day =
+      weekByIndex[dayIndex] ??
+      currentWeek.days.find((item) => normalizeDay(item.day) === normalizeDay(orderedWeek[dayIndex])) ??
+      currentWeek.days[0];
+
+    return day.tasks.map((task, index) => ({
+      id: `${currentWeek.week}-${day.day}-${offset}-${index}`,
+      label: task.label,
+      progress: task.target ?? 'Planned',
+      done: false,
+      icon: iconForTaskType(task.type),
+    }));
+  }).flat() satisfies ActivityTaskCard[];
+}
+
+export function resolveTasksForDay(plan: ActivityPlan | null, dayLabel: string) {
+  if (!plan?.weeks?.length) {
+    return {
+      tasks: resolveTodayTasks(plan),
+      matchedDay: dayLabel,
+      availableDays: [],
+    };
+  }
+
+  const currentWeek = plan.weeks.find((week) => week.week === plan.current_week) ?? plan.weeks[0];
+  const normalizeDay = (value: string) => value.toLowerCase().replace(/[^a-z]/g, '');
+  const dayCodeMap: Record<string, string> = {
+    SU: 'Sunday',
+    MO: 'Monday',
+    TU: 'Tuesday',
+    WE: 'Wednesday',
+    TH: 'Thursday',
+    FR: 'Friday',
+    SA: 'Saturday',
+  };
+  const resolvedLabel = dayCodeMap[dayLabel] ?? dayLabel;
+  const match =
+    currentWeek.days.find((day) => normalizeDay(day.day) === normalizeDay(resolvedLabel)) ?? currentWeek.days[0];
+
+  return {
+    matchedDay: match.day,
+    availableDays: currentWeek.days.map((day) => day.day),
+    tasks: match.tasks.map((task, index) => ({
+      id: `${currentWeek.week}-${match.day}-${index}`,
+      label: task.label,
+      progress: task.target ?? 'Planned',
+      done: false,
+      icon: iconForTaskType(task.type),
+    })) satisfies ActivityTaskCard[],
+  };
 }
 
 export function resolveWeekBars(plan: ActivityPlan | null) {

@@ -129,7 +129,7 @@ If you only want one code sample in this section, reuse the nutrition API call a
 
 This is the most distinctive part of Fitraq. The app does not only show fixed screens; it resolves what the user should do today based on the current plan, the current week, and the current day. That makes the experience feel adaptive rather than static.
 
-Use this snippet from [app/(tabs)/activity-program.ts](/Users/abdulla/Developer/New%20Projects/Fitraq/app/%28tabs%29/activity-program.ts):
+Use this snippet from [lib/activity-program.ts](/Users/abdulla/Developer/New%20Projects/Fitraq/lib/activity-program.ts):
 
 ```ts
 const currentWeek = plan.weeks.find((week) => week.week === plan.current_week) ?? plan.weeks[0];
@@ -174,7 +174,7 @@ This shows the app’s “today-first” logic in a very readable way. It is a s
 - [app/(tabs)/nutrition.tsx](/Users/abdulla/Developer/New%20Projects/Fitraq/app/%28tabs%29/nutrition.tsx)
 - [app/(tabs)/activity.tsx](/Users/abdulla/Developer/New%20Projects/Fitraq/app/%28tabs%29/activity.tsx)
 - [app/(tabs)/activity-week.tsx](/Users/abdulla/Developer/New%20Projects/Fitraq/app/%28tabs%29/activity-week.tsx)
-- [app/(tabs)/activity-program.ts](/Users/abdulla/Developer/New%20Projects/Fitraq/app/%28tabs%29/activity-program.ts)
+- [lib/activity-program.ts](/Users/abdulla/Developer/New%20Projects/Fitraq/lib/activity-program.ts)
 - [lib/backend.ts](/Users/abdulla/Developer/New%20Projects/Fitraq/lib/backend.ts)
 - [lib/user-session.ts](/Users/abdulla/Developer/New%20Projects/Fitraq/lib/user-session.ts)
 - [constants/api.ts](/Users/abdulla/Developer/New%20Projects/Fitraq/constants/api.ts)

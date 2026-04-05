@@ -9,7 +9,7 @@ import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ACTIVITY_TYPES, TRAILS, type Coordinate } from './journey-data';
+import { ACTIVITY_TYPES, TRAILS, type Coordinate } from '@/lib/journey-data';
 
 const DEFAULT_REGION = {
   latitude: 25.2048,

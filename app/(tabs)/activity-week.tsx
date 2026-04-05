@@ -7,7 +7,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { resolveActivityWeeks } from './activity-program';
+import { resolveActivityWeeks } from '@/lib/activity-program';
 
 export default function ActivityWeekScreen() {
   const params = useLocalSearchParams<{ weekId?: string }>();

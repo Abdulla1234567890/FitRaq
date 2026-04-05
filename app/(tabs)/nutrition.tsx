@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "@/constants/api";
+import { setCurrentNutritionCalories } from "@/lib/user-session";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import * as Haptics from "expo-haptics";
 import { useMemo, useState } from "react";
@@ -172,6 +173,7 @@ export default function NutritionScreen() {
       const nextAnalysis = data.result as NutritionAnalysis;
 
       setAnalysis(nextAnalysis);
+      setCurrentNutritionCalories(nextAnalysis.daily_total);
       setDays((current) =>
         current.map((day) =>
           day.id === selectedDayId

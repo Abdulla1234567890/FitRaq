@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { generateActivityPlan, submitOnboarding } from '@/lib/backend';
+import { fetchActivityPlan, generateActivityPlan, submitOnboarding } from '@/lib/backend';
 import { setCurrentActivityPlan, setCurrentOnboardingAnswers, setCurrentUserProfile } from '@/lib/user-session';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -213,9 +213,10 @@ export default function OnboardingScreen() {
 
       const response = await submitOnboarding(payload);
       const returnedUserId = response?.user_id ?? response?.user?.id ?? response?.id ?? null;
+      const resolvedUserId = returnedUserId || payload.user.name || null;
 
       setCurrentUserProfile({
-        userId: returnedUserId,
+        userId: resolvedUserId,
         name: payload.user.name,
         age: payload.user.age,
         weightKg: payload.user.weight_kg,
@@ -239,6 +240,20 @@ export default function OnboardingScreen() {
         setCurrentActivityPlan(returnedPlan);
       } catch {
         setCurrentActivityPlan(null);
+      }
+
+      const planFetchKeys = [resolvedUserId, payload.user.name].filter(Boolean) as string[];
+      for (const key of Array.from(new Set(planFetchKeys))) {
+        try {
+          const storedPlan = await fetchActivityPlan(key);
+          const storedReturned = storedPlan?.plan ?? storedPlan?.result ?? null;
+          if (storedReturned) {
+            setCurrentActivityPlan(storedReturned);
+            break;
+          }
+        } catch {
+          // try next key
+        }
       }
 
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

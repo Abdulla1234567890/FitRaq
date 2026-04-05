@@ -18,6 +18,7 @@ type StoredOnboardingAnswers = {
 
 type AppSession = {
   activityPlan: ActivityPlan | null;
+  nutritionCalories: number;
   onboarding: StoredOnboardingAnswers | null;
   profile: StoredUserProfile | null;
 };
@@ -50,6 +51,7 @@ export type ActivityPlan = {
 
 const appSession: AppSession = {
   activityPlan: null,
+  nutritionCalories: 0,
   onboarding: null,
   profile: null,
 };
@@ -76,4 +78,12 @@ export function setCurrentActivityPlan(activityPlan: ActivityPlan | null) {
 
 export function getCurrentActivityPlan() {
   return appSession.activityPlan;
+}
+
+export function setCurrentNutritionCalories(calories: number) {
+  appSession.nutritionCalories = Number.isFinite(calories) ? Math.max(0, Math.round(calories)) : 0;
+}
+
+export function getCurrentNutritionCalories() {
+  return appSession.nutritionCalories;
 }

@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ACTIVITY_TYPES, TRAILS, type Trail } from './journey-data';
+import { ACTIVITY_TYPES, TRAILS, type Trail } from '@/lib/journey-data';
 
 export default function ChooseTrailScreen() {
   const params = useLocalSearchParams<{ type?: string }>();

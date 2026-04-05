@@ -49,6 +49,20 @@ export async function generateActivityPlan(payload: ActivityPlanPayload) {
   return postJson('/generate-activity-plan', payload);
 }
 
+export async function fetchActivityPlan(userId: string) {
+  const response = await fetch(
+    `${API_BASE_URL}/activity-plan?user_id=${encodeURIComponent(userId)}`
+  );
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(data?.error || 'Could not fetch activity plan.');
+  }
+
+  return data;
+}
+
 export async function submitJourney(payload: JourneyPayload) {
   return postJson('/journeys', payload);
 }
