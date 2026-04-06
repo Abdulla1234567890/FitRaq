@@ -44,29 +44,53 @@ type NutritionAnalysis = {
   notes: string[];
 };
 
-const INITIAL_DAYS: NutritionDay[] = [
-  ...createNutritionDays(new Date()),
-];
-
 export default function NutritionScreen() {
-  const [selectedDayId, setSelectedDayId] = useState(createNutritionDayId(new Date()));
-  const [days, setDays] = useState(INITIAL_DAYS);
+  const today = useMemo(() => startOfDay(new Date()), []);
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [displayedMonth, setDisplayedMonth] = useState(
+    new Date(today.getFullYear(), today.getMonth(), 1),
+  );
+  const [dayEntries, setDayEntries] = useState<Record<string, NutritionDay>>(() =>
+    createInitialNutritionEntries(today),
+  );
   const [submitState, setSubmitState] = useState(
     "Meals ready to send to the calorie model.",
   );
   const [analysis, setAnalysis] = useState<NutritionAnalysis | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [calendarVisible, setCalendarVisible] = useState(false);
-  const monthLabel = useMemo(
+  const selectedDayId = useMemo(
+    () => createNutritionDayId(selectedDate),
+    [selectedDate],
+  );
+  const monthDays = useMemo(
+    () => getMonthCalendarDays(displayedMonth),
+    [displayedMonth],
+  );
+  const selectedMonthLabel = useMemo(
     () =>
       new Intl.DateTimeFormat("en-US", {
         month: "long",
         year: "numeric",
-      }).format(createDateFromId(selectedDayId)),
-    [selectedDayId],
+      }).format(selectedDate),
+    [selectedDate],
   );
-
-  const selectedDay = days.find((day) => day.id === selectedDayId) ?? days[0];
+  const modalMonthLabel = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        year: "numeric",
+      }).format(displayedMonth),
+    [displayedMonth],
+  );
+  const visibleDays = useMemo(
+    () => getWeekStripDays(selectedDate),
+    [selectedDate],
+  );
+  const selectedDay = useMemo(
+    () => dayEntries[selectedDayId] ?? createNutritionDay(selectedDate),
+    [dayEntries, selectedDayId, selectedDate],
+  );
   const hasMealContent = useMemo(
     () =>
       Boolean(
@@ -79,64 +103,62 @@ export default function NutritionScreen() {
   );
 
   const updateMeal = (meal: keyof NutritionDay["meals"], value: string) => {
-    setDays((current) =>
-      current.map((day) =>
-        day.id === selectedDayId
-          ? {
-              ...day,
-              meals: {
-                ...day.meals,
-                [meal]: value,
-              },
-            }
-          : day,
-      ),
-    );
+    setDayEntries((current) => {
+      const currentDay = current[selectedDayId] ?? createNutritionDay(selectedDate);
+      return {
+        ...current,
+        [selectedDayId]: {
+          ...currentDay,
+          meals: {
+            ...currentDay.meals,
+            [meal]: value,
+          },
+        },
+      };
+    });
   };
 
   const updateExtra = (index: number, value: string) => {
-    setDays((current) =>
-      current.map((day) =>
-        day.id === selectedDayId
-          ? {
-              ...day,
-              extras: day.extras.map((extra, extraIndex) =>
-                extraIndex === index ? value : extra,
-              ),
-            }
-          : day,
-      ),
-    );
+    setDayEntries((current) => {
+      const currentDay = current[selectedDayId] ?? createNutritionDay(selectedDate);
+      return {
+        ...current,
+        [selectedDayId]: {
+          ...currentDay,
+          extras: currentDay.extras.map((extra, extraIndex) =>
+            extraIndex === index ? value : extra,
+          ),
+        },
+      };
+    });
   };
 
   const addExtraField = async () => {
     await Haptics.selectionAsync();
-    setDays((current) =>
-      current.map((day) =>
-        day.id === selectedDayId
-          ? {
-              ...day,
-              extras: [...day.extras, ""],
-            }
-          : day,
-      ),
-    );
+    setDayEntries((current) => {
+      const currentDay = current[selectedDayId] ?? createNutritionDay(selectedDate);
+      return {
+        ...current,
+        [selectedDayId]: {
+          ...currentDay,
+          extras: [...currentDay.extras, ""],
+        },
+      };
+    });
   };
 
   const deleteExtra = async (index: number) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setDays((current) =>
-      current.map((day) =>
-        day.id === selectedDayId
-          ? {
-              ...day,
-              extras: day.extras.filter(
-                (_, extraIndex) => extraIndex !== index,
-              ),
-            }
-          : day,
-      ),
-    );
+    setDayEntries((current) => {
+      const currentDay = current[selectedDayId] ?? createNutritionDay(selectedDate);
+      return {
+        ...current,
+        [selectedDayId]: {
+          ...currentDay,
+          extras: currentDay.extras.filter((_, extraIndex) => extraIndex !== index),
+        },
+      };
+    });
   };
 
   const submitMeals = async () => {
@@ -158,7 +180,7 @@ export default function NutritionScreen() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          date: `2026-03-${selectedDay.dateNumber.padStart(2, "0")}`,
+          date: formatDateAsIso(selectedDate),
           meals: selectedDay.meals,
           extras: selectedDay.extras.filter((item) => item.trim()),
         }),
@@ -174,16 +196,16 @@ export default function NutritionScreen() {
 
       setAnalysis(nextAnalysis);
       setCurrentNutritionCalories(nextAnalysis.daily_total);
-      setDays((current) =>
-        current.map((day) =>
-          day.id === selectedDayId
-            ? {
-                ...day,
-                calories: nextAnalysis.daily_total,
-              }
-            : day,
-        ),
-      );
+      setDayEntries((current) => {
+        const currentDay = current[selectedDayId] ?? createNutritionDay(selectedDate);
+        return {
+          ...current,
+          [selectedDayId]: {
+            ...currentDay,
+            calories: nextAnalysis.daily_total,
+          },
+        };
+      });
       setSubmitState(
         `Analysis complete. Estimated ${nextAnalysis.daily_total} calories for this day.`,
       );
@@ -217,6 +239,13 @@ export default function NutritionScreen() {
             <Pressable
               onPress={async () => {
                 await Haptics.selectionAsync();
+                setDisplayedMonth(
+                  new Date(
+                    selectedDate.getFullYear(),
+                    selectedDate.getMonth(),
+                    1,
+                  ),
+                );
                 setCalendarVisible(true);
               }}
               style={styles.headerIcon}
@@ -227,7 +256,7 @@ export default function NutritionScreen() {
 
           <View style={styles.calendarCard}>
             <View style={styles.calendarHeaderInline}>
-              <Text style={styles.calendarMonthHero}>{monthLabel}</Text>
+              <Text style={styles.calendarMonthHero}>{selectedMonthLabel}</Text>
             </View>
 
             <ScrollView
@@ -235,7 +264,7 @@ export default function NutritionScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.calendarRow}
             >
-              {days.map((day) => {
+              {visibleDays.map((day) => {
                 const isActive = day.id === selectedDayId;
 
                 return (
@@ -243,11 +272,19 @@ export default function NutritionScreen() {
                     key={day.id}
                     onPress={async () => {
                       await Haptics.selectionAsync();
-                      setSelectedDayId(day.id);
+                      const nextDate = day.date;
+                      setSelectedDate(nextDate);
+                      setDayEntries((current) =>
+                        ensureNutritionDayEntry(current, nextDate),
+                      );
                     }}
                     style={styles.dayItem}
                   >
-                    <Text style={styles.weekday}>{day.weekday}</Text>
+                    <Text
+                      style={styles.weekday}
+                    >
+                      {day.day}
+                    </Text>
                     <View
                       style={[
                         styles.dateCircle,
@@ -449,52 +486,91 @@ export default function NutritionScreen() {
               </Pressable>
             </View>
 
-            <Text style={styles.modalMonthLabel}>{monthLabel}</Text>
+            <View style={styles.calendarHeaderInline}>
+              <Pressable
+                onPress={async () => {
+                  await Haptics.selectionAsync();
+                  setDisplayedMonth(
+                    new Date(
+                      displayedMonth.getFullYear(),
+                      displayedMonth.getMonth() - 1,
+                      1,
+                    ),
+                  );
+                }}
+                style={styles.monthNavButton}
+              >
+                <MaterialIcons color="#2F42C7" name="chevron-left" size={22} />
+              </Pressable>
+              <Text style={styles.calendarMonthHero}>{modalMonthLabel}</Text>
+              <Pressable
+                onPress={async () => {
+                  await Haptics.selectionAsync();
+                  setDisplayedMonth(
+                    new Date(
+                      displayedMonth.getFullYear(),
+                      displayedMonth.getMonth() + 1,
+                      1,
+                    ),
+                  );
+                }}
+                style={styles.monthNavButton}
+              >
+                <MaterialIcons color="#2F42C7" name="chevron-right" size={22} />
+              </Pressable>
+            </View>
 
             <View style={styles.monthWeekHeader}>
               {["M", "T", "W", "T", "F", "S", "S"].map((day, index) => (
-                <Text
-                  key={`${day}-${index}`}
-                  style={styles.monthWeekHeaderText}
-                >
+                <Text key={`${day}-${index}`} style={styles.monthWeekHeaderText}>
                   {day}
                 </Text>
               ))}
             </View>
 
             <View style={styles.monthGrid}>
-              {days.map((day) => {
+              {monthDays.map((day) => {
                 const isActive = day.id === selectedDayId;
+                const isMuted = !day.isCurrentMonth;
+                const loggedCalories = dayEntries[day.id]?.calories ?? 0;
 
                 return (
                   <Pressable
                     key={day.id}
                     onPress={async () => {
                       await Haptics.selectionAsync();
-                      setSelectedDayId(day.id);
+                      const nextDate = startOfDay(day.date);
+                      setSelectedDate(nextDate);
+                      setDisplayedMonth(
+                        new Date(nextDate.getFullYear(), nextDate.getMonth(), 1),
+                      );
+                      setDayEntries((current) =>
+                        ensureNutritionDayEntry(current, nextDate),
+                      );
                       setCalendarVisible(false);
                     }}
                     style={[
                       styles.monthDayCell,
+                      isMuted ? styles.monthDayCellMuted : undefined,
                       isActive ? styles.monthDayCellActive : undefined,
                     ]}
                   >
                     <Text
                       style={[
                         styles.monthDayText,
+                        isMuted ? styles.monthDayTextMuted : undefined,
                         isActive ? styles.monthDayTextActive : undefined,
                       ]}
                     >
                       {day.dateNumber}
                     </Text>
-                    <Text
+                    <View
                       style={[
-                        styles.monthDaySubtext,
-                        isActive ? styles.monthDaySubtextActive : undefined,
+                        styles.monthDayDot,
+                        loggedCalories > 0 ? styles.monthDayDotLogged : undefined,
+                        isActive ? styles.monthDayDotActive : undefined,
                       ]}
-                    >
-                      {day.weekday}
-                    </Text>
+                    />
                   </Pressable>
                 );
               })}
@@ -540,43 +616,117 @@ function AnalysisPill({ label, value }: { label: string; value: number }) {
   );
 }
 
-function createNutritionDays(anchor: Date): NutritionDay[] {
-  const today = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
-  const dayOfWeek = today.getDay();
-  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  const monday = new Date(today);
-  monday.setDate(today.getDate() + mondayOffset);
-
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + index);
-
-    return {
-      id: createNutritionDayId(date),
-      weekday: new Intl.DateTimeFormat("en-US", { weekday: "short" })
-        .format(date)
-        .slice(0, 2)
-        .toUpperCase(),
-      dateNumber: `${date.getDate()}`,
-      calories: 0,
-      meals: {
-        breakfast: "",
-        lunch: "",
-        dinner: "",
-      },
-      extras: [],
-    };
-  });
-}
-
 function createNutritionDayId(date: Date) {
   return `day-${date.getFullYear()}-${`${date.getMonth() + 1}`.padStart(2, "0")}-${`${date.getDate()}`.padStart(2, "0")}`;
 }
 
-function createDateFromId(id: string) {
-  const parts = id.replace("day-", "").split("-");
-  const [year, month, day] = parts.map(Number);
-  return new Date(year, (month || 1) - 1, day || 1);
+function createNutritionDay(date: Date): NutritionDay {
+  const dayDate = startOfDay(date);
+  return {
+    id: createNutritionDayId(dayDate),
+    weekday: new Intl.DateTimeFormat("en-US", { weekday: "short" })
+      .format(dayDate)
+      .slice(0, 2)
+      .toUpperCase(),
+    dateNumber: `${dayDate.getDate()}`,
+    calories: 0,
+    meals: {
+      breakfast: "",
+      lunch: "",
+      dinner: "",
+    },
+    extras: [],
+  };
+}
+
+function createInitialNutritionEntries(anchor: Date): Record<string, NutritionDay> {
+  const day = createNutritionDay(anchor);
+  return {
+    [day.id]: day,
+  };
+}
+
+function ensureNutritionDayEntry(
+  entries: Record<string, NutritionDay>,
+  date: Date,
+): Record<string, NutritionDay> {
+  const id = createNutritionDayId(date);
+  if (entries[id]) {
+    return entries;
+  }
+  return {
+    ...entries,
+    [id]: createNutritionDay(date),
+  };
+}
+
+type NutritionCalendarDay = {
+  date: Date;
+  dateNumber: string;
+  id: string;
+  isCurrentMonth: boolean;
+};
+
+type NutritionWeekStripDay = {
+  date: Date;
+  dateNumber: string;
+  day: string;
+  id: string;
+};
+
+function getMonthCalendarDays(displayMonth: Date): NutritionCalendarDay[] {
+  const monthStart = new Date(
+    displayMonth.getFullYear(),
+    displayMonth.getMonth(),
+    1,
+  );
+  const dayOffset = (monthStart.getDay() + 6) % 7;
+  const gridStart = new Date(monthStart);
+  gridStart.setDate(monthStart.getDate() - dayOffset);
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(gridStart);
+    date.setDate(gridStart.getDate() + index);
+    return {
+      date,
+      dateNumber: `${date.getDate()}`,
+      id: createNutritionDayId(date),
+      isCurrentMonth: date.getMonth() === displayMonth.getMonth(),
+    };
+  });
+}
+
+function getWeekStripDays(anchorDate: Date): NutritionWeekStripDay[] {
+  const anchor = startOfDay(anchorDate);
+  const weekday = anchor.getDay();
+  const mondayOffset = weekday === 0 ? -6 : 1 - weekday;
+  const monday = new Date(anchor);
+  monday.setDate(anchor.getDate() + mondayOffset);
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+    return {
+      date,
+      dateNumber: `${date.getDate()}`,
+      day: new Intl.DateTimeFormat("en-US", { weekday: "short" })
+        .format(date)
+        .slice(0, 2)
+        .toUpperCase(),
+      id: createNutritionDayId(date),
+    };
+  });
+}
+
+function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function formatDateAsIso(date: Date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 const styles = StyleSheet.create({
@@ -670,10 +820,11 @@ const styles = StyleSheet.create({
   },
   monthWeekHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
   },
   monthWeekHeaderText: {
-    width: 36,
+    flex: 1,
     textAlign: "center",
     color: "#8F867F",
     fontSize: 12,
@@ -682,41 +833,50 @@ const styles = StyleSheet.create({
   monthGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    rowGap: 6,
   },
   monthDayCell: {
-    width: 46,
-    borderRadius: 16,
-    backgroundColor: "#F7F4EF",
+    width: "14.2857%",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 10,
-    gap: 4,
+    paddingVertical: 7,
+    borderRadius: 12,
+  },
+  monthDayCellMuted: {
+    opacity: 0.46,
   },
   monthDayCellActive: {
     backgroundColor: "#2F42C7",
   },
   monthDayText: {
     color: "#1B140F",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "700",
+  },
+  monthDayTextMuted: {
+    color: "#8F867F",
   },
   monthDayTextActive: {
     color: "#FFFFFF",
   },
-  monthDaySubtext: {
-    color: "#8F867F",
-    fontSize: 10,
-    fontWeight: "700",
+  monthDayDot: {
+    marginTop: 4,
+    width: 5,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: "transparent",
   },
-  monthDaySubtextActive: {
-    color: "#DCE1FF",
+  monthDayDotLogged: {
+    backgroundColor: "#2F42C7",
+  },
+  monthDayDotActive: {
+    backgroundColor: "#FFFFFF",
   },
   calendarCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 24,
     paddingVertical: 14,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     shadowColor: "#000000",
     shadowOpacity: 0.04,
     shadowRadius: 8,
@@ -724,12 +884,23 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   calendarHeaderInline: {
-    paddingHorizontal: 6,
-    paddingBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 2,
+    paddingBottom: 10,
+  },
+  monthNavButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F4F6FF",
   },
   calendarMonthHero: {
     color: "#1B140F",
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "700",
   },
   calendarRow: {

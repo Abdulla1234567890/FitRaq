@@ -5,7 +5,10 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { getCurrentNutritionCalories } from "@/lib/user-session";
+import {
+  getCurrentNutritionCalories,
+  getCurrentUserProfile,
+} from "@/lib/user-session";
 
 const WEEK_BARS = [
   { day: "M", value: 0.4 },
@@ -22,10 +25,13 @@ export default function HomePageScreen() {
   const [nutritionCalories, setNutritionCalories] = useState(() =>
     getCurrentNutritionCalories(),
   );
+  const [profileName, setProfileName] = useState(
+    () => getCurrentUserProfile()?.name?.trim() ?? "",
+  );
   const firstName = useMemo(() => {
     const rawName = Array.isArray(params.name) ? params.name[0] : params.name;
-    return rawName?.trim() || "Janna";
-  }, [params.name]);
+    return rawName?.trim() || profileName || "User";
+  }, [params.name, profileName]);
   const nutritionTarget = 2000;
   const nutritionLoggedPercent = Math.max(
     0,
@@ -35,6 +41,7 @@ export default function HomePageScreen() {
   useFocusEffect(
     useCallback(() => {
       setNutritionCalories(getCurrentNutritionCalories());
+      setProfileName(getCurrentUserProfile()?.name?.trim() ?? "");
     }, []),
   );
 
