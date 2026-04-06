@@ -1,23 +1,23 @@
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import * as Haptics from "expo-haptics";
-import { router, useLocalSearchParams } from "expo-router";
-import { useFocusEffect } from "@react-navigation/native";
-import { useCallback, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import {
   getCurrentNutritionCalories,
   getCurrentUserProfile,
 } from "@/lib/user-session";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useFocusEffect } from "@react-navigation/native";
+import * as Haptics from "expo-haptics";
+import { router, useLocalSearchParams } from "expo-router";
+import { useCallback, useMemo, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const WEEK_BARS = [
-  { day: "M", value: 0.4 },
-  { day: "T", value: 0.48 },
-  { day: "W", value: 0.63 },
+  { day: "M", value: 0.4, active: false },
+  { day: "T", value: 0.48, active: false },
+  { day: "W", value: 0.63, active: false },
   { day: "T", value: 0.88, active: true },
-  { day: "F", value: 0.56 },
-  { day: "S", value: 0.34 },
-  { day: "S", value: 0.24 },
+  { day: "F", value: 0.56, active: false },
+  { day: "S", value: 0.34, active: false },
+  { day: "S", value: 0.24, active: false },
 ] as const;
 
 export default function HomePageScreen() {
