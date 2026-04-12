@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 
 export const API_BASE_URL = Platform.select({
-  android: "http://192.168.1.176:5001",
-  default: "http://192.168.1.176r:5001",
+  android: "https://fitraq-backend.onrender.com",
+  default: "https://fitraq-backend.onrender.com",
 });
